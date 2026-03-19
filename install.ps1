@@ -18,8 +18,8 @@ function Resolve-PluginSelection {
   }
 
   if ($RequestedPlugin -and $RequestedPlugin -ne "Menu") {
-    if ($RequestedPlugin -notin @("All", "RecentDirs", "RecentFiles", "Style")) {
-      throw "Invalid plugin selection '$RequestedPlugin'. Use Menu, All, RecentDirs, RecentFiles, or Style."
+    if ($RequestedPlugin -notin @("All", "RecentDirs", "RecentFiles", "Style", "Settings")) {
+      throw "Invalid plugin selection '$RequestedPlugin'. Use Menu, All, RecentDirs, RecentFiles, Style, or Settings."
     }
     return $RequestedPlugin
   }
@@ -44,6 +44,11 @@ function Resolve-PluginSelection {
       Key = "Style"
       Label = "Style Preferences"
       Description = "Install redblack_style.lua only."
+    },
+    [PSCustomObject]@{
+      Key = "Settings"
+      Label = "Custom Settings"
+      Description = "Install custom_settings.lua only."
     },
     [PSCustomObject]@{
       Key = $null
@@ -107,6 +112,7 @@ function Resolve-PluginSelection {
     (New-Object System.Management.Automation.Host.ChoiceDescription "Recent &Directories", "Install recentdirs_panel.lua only."),
     (New-Object System.Management.Automation.Host.ChoiceDescription "Recent &Files", "Install recentfiles_panel.lua only."),
     (New-Object System.Management.Automation.Host.ChoiceDescription "&Style", "Install redblack_style.lua only."),
+    (New-Object System.Management.Automation.Host.ChoiceDescription "S&ettings", "Install custom_settings.lua only."),
     (New-Object System.Management.Automation.Host.ChoiceDescription "&All", "Install all plugins, including style preferences."),
     (New-Object System.Management.Automation.Host.ChoiceDescription "&Cancel", "Exit without installing.")
   )
@@ -122,7 +128,8 @@ function Resolve-PluginSelection {
     0 { return "RecentDirs" }
     1 { return "RecentFiles" }
     2 { return "Style" }
-    3 { return "All" }
+    3 { return "Settings" }
+    4 { return "All" }
     default { return $null }
   }
 }
@@ -142,8 +149,12 @@ function Resolve-SourceFiles {
     "Style" {
       return @("redblack_style.lua")
     }
+    "Settings" {
+      return @("custom_settings.lua")
+    }
     "All" {
       return @(
+        "custom_settings.lua",
         "redblack_style.lua",
         "recentdirs_panel.lua",
         "recentfiles_panel.lua"
@@ -151,6 +162,7 @@ function Resolve-SourceFiles {
     }
     default {
       return @(
+        "custom_settings.lua",
         "redblack_style.lua",
         "recentdirs_panel.lua",
         "recentfiles_panel.lua"

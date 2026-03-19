@@ -1,7 +1,8 @@
 # Lite XL Customization
 
-This repository contains three single-file Lite XL plugins:
+This repository contains four single-file Lite XL plugins:
 
+- `custom_settings.lua` applies your preferred plugin configuration overrides, such as `autoreload` and `recentfiles_panel` settings.
 - `redblack_style.lua` applies your black-and-red style preferences as an optional visual theme plugin.
 - `recentdirs_panel.lua` adds a Recent Directories panel above the recent files panel. Clicking a directory switches the current Lite XL project so the treeview opens that directory.
 - `recentfiles_panel.lua` adds a Recent Files panel to the treeview area and lets you reopen recently accessed files.
@@ -18,6 +19,7 @@ Run the installer from this repository:
 
 The installer now shows a selection menu so you can install:
 
+- `custom_settings.lua` only
 - `redblack_style.lua` only
 - `recentdirs_panel.lua` only
 - `recentfiles_panel.lua` only
@@ -38,6 +40,7 @@ For non-interactive use, you can choose explicitly:
 .\install.ps1 -Plugin RecentDirs
 .\install.ps1 -Plugin RecentFiles
 .\install.ps1 -Plugin Style
+.\install.ps1 -Plugin Settings
 ```
 
 It copies the selected plugin file or files into the first matching Lite XL plugins directory from this list:
@@ -81,6 +84,19 @@ config.plugins.recentdirs_panel = {
 config.plugins.recentfiles_panel = {
   visible = true,
   max_visible_items = 10,
+}
+```
+
+`custom_settings.lua` currently applies:
+
+```lua
+config.plugins.autoreload = {
+  always_show_nagview = false,
+}
+
+config.plugins.recentfiles_panel = {
+  visible = true,
+  max_visible_items = 12,
 }
 ```
 
