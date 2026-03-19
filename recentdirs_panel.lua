@@ -17,15 +17,16 @@ if not ok_recent then
   return
 end
 
-config.plugins.recentfiles_panel = common.merge({
+config.plugins.recentdirs_panel = common.merge({
   visible = true,
-  max_visible_items = 10,
-}, config.plugins.recentfiles_panel)
+  max_visible_items = 8,
+  max_tracked_items = 100,
+}, config.plugins.recentdirs_panel)
 
-local state = rawget(_G, "__recentfiles_panel_state")
+local state = rawget(_G, "__recentdirs_panel_state")
 if not state then
   state = {
-    files = {},
+    dirs = {},
     initialized = false,
     open_doc_wrapped = false,
     command_perform_wrapped = false,
@@ -33,7 +34,7 @@ if not state then
     view = nil,
     node = nil,
   }
-  rawset(_G, "__recentfiles_panel_state", state)
+  rawset(_G, "__recentdirs_panel_state", state)
 end
 
 local function insert_unique(t, v)
@@ -47,14 +48,62 @@ local function insert_unique(t, v)
   table.insert(t, 1, v)
 end
 
-local function trim_files()
-  local max_files = 100
-  if config.plugins.recentfiles and config.plugins.recentfiles.max_recent_files then
-    max_files = config.plugins.recentfiles.max_recent_files
+local function dirname(path)
+  if not path then
+    return nil
   end
-  while #state.files > max_files do
-    table.remove(state.files, #state.files)
+
+  return common.dirname(path)
+end
+
+local function trim_dirs()
+  local max_dirs = config.plugins.recentdirs_panel.max_tracked_items or 100
+  while #state.dirs > max_dirs do
+    table.remove(state.dirs, #state.dirs)
   end
+end
+
+local function track_file(path)
+  local encoded_path = common.home_encode(path)
+  local dir = dirname(encoded_path)
+  if not dir then
+    return
+  end
+
+  insert_unique(state.dirs, dir)
+  trim_dirs()
+end
+
+local function open_directory(path)
+  local abs_path = common.home_expand(path)
+  if type(system) == "table" and type(system.absolute_path) == "function" then
+    abs_path = system.absolute_path(abs_path)
+  end
+
+  if type(system) == "table" and type(system.get_file_info) == "function" then
+    local info = system.get_file_info(abs_path)
+    if not info or info.type ~= "dir" then
+      return false
+    end
+  end
+
+  if abs_path == core.project_dir then
+    return true
+  end
+
+  if type(core.open_folder_project) ~= "function" then
+    return false
+  end
+
+  if type(core.confirm_close_docs) == "function" then
+    core.confirm_close_docs(core.docs, function(dirpath)
+      core.open_folder_project(dirpath)
+    end, abs_path)
+    return true
+  end
+
+  core.open_folder_project(abs_path)
+  return true
 end
 
 local function get_view_node(view)
@@ -74,11 +123,11 @@ local function get_bottom_leaf(node)
 end
 
 local function get_anchor_node_and_dir()
-  local recent_dirs_state = rawget(_G, "__recentdirs_panel_state")
-  if recent_dirs_state and recent_dirs_state.view then
-    local recent_dirs_node = get_view_node(recent_dirs_state.view)
-    if recent_dirs_node then
-      return recent_dirs_node, "down"
+  local recent_files_state = rawget(_G, "__recentfiles_panel_state")
+  if recent_files_state and recent_files_state.view then
+    local node = get_view_node(recent_files_state.view)
+    if node then
+      return node, "up"
     end
   end
 
@@ -91,9 +140,13 @@ local function get_anchor_node_and_dir()
 end
 
 if not state.initialized then
-  for i, path in ipairs(recent_files_module) do
-    state.files[i] = path
+  for _, path in ipairs(recent_files_module) do
+    local dir = dirname(path)
+    if dir then
+      insert_unique(state.dirs, dir)
+    end
   end
+  trim_dirs()
   state.initialized = true
 end
 
@@ -105,8 +158,7 @@ if not state.open_doc_wrapped then
       local file = io.open(doc.abs_filename, "r")
       if file then
         file:close()
-        insert_unique(state.files, common.home_encode(doc.abs_filename))
-        trim_files()
+        track_file(doc.abs_filename)
       end
     end
     return doc
@@ -119,52 +171,52 @@ if not state.command_perform_wrapped then
   command.perform = function(cmd, ...)
     local result = previous_command_perform(cmd, ...)
     if cmd == "core:open-recent-file-clear" then
-      state.files = {}
+      state.dirs = {}
     end
     return result
   end
   state.command_perform_wrapped = true
 end
 
-local RecentFilesPanel = View:extend()
+local RecentDirsPanel = View:extend()
 
-function RecentFilesPanel:new()
-  RecentFilesPanel.super.new(self)
+function RecentDirsPanel:new()
+  RecentDirsPanel.super.new(self)
   self.context = "application"
   self.scrollable = true
-  self.visible = config.plugins.recentfiles_panel.visible
+  self.visible = config.plugins.recentdirs_panel.visible
   self.init_size = true
   self.hovered_index = nil
 end
 
-function RecentFilesPanel:get_name()
+function RecentDirsPanel:get_name()
   return nil
 end
 
-function RecentFilesPanel:get_line_height()
+function RecentDirsPanel:get_line_height()
   return style.font:get_height() + style.padding.y
 end
 
-function RecentFilesPanel:get_header_height()
+function RecentDirsPanel:get_header_height()
   return self:get_line_height()
 end
 
-function RecentFilesPanel:get_visible_lines()
-  return math.max(1, config.plugins.recentfiles_panel.max_visible_items or 10)
+function RecentDirsPanel:get_visible_lines()
+  return math.max(1, config.plugins.recentdirs_panel.max_visible_items or 8)
 end
 
-function RecentFilesPanel:get_scrollable_size()
+function RecentDirsPanel:get_scrollable_size()
   return self:get_header_height()
-    + self:get_line_height() * math.max(1, #state.files)
+    + self:get_line_height() * math.max(1, #state.dirs)
     + style.padding.y
 end
 
-function RecentFilesPanel:toggle_visible()
+function RecentDirsPanel:toggle_visible()
   self.visible = not self.visible
   core.redraw = true
 end
 
-function RecentFilesPanel:update()
+function RecentDirsPanel:update()
   local dest_size = 0
   if self.visible then
     dest_size = self:get_header_height()
@@ -179,14 +231,14 @@ function RecentFilesPanel:update()
     self:move_towards(self.size, "y", dest_size)
   end
 
-  RecentFilesPanel.super.update(self)
+  RecentDirsPanel.super.update(self)
 end
 
-function RecentFilesPanel:each_item()
+function RecentDirsPanel:each_item()
   local ox, oy = self:get_content_offset()
   local line_h = self:get_line_height()
   local header_h = self:get_header_height()
-  local count = math.max(1, #state.files)
+  local count = math.max(1, #state.dirs)
   local x = ox + style.padding.x
   local w = self.size.x - 2 * style.padding.x
   local index = 0
@@ -198,12 +250,12 @@ function RecentFilesPanel:each_item()
     end
 
     local y = oy + header_h + line_h * (index - 1)
-    local text = state.files[index] or "(no recent files yet)"
+    local text = state.dirs[index] or "(no recent directories yet)"
     return index, text, x, y, w, line_h
   end
 end
 
-function RecentFilesPanel:get_item_at(px, py)
+function RecentDirsPanel:get_item_at(px, py)
   for index, text, x, y, w, h in self:each_item() do
     if px >= x and px <= x + w and py >= y and py <= y + h then
       return index, text, x, y, w, h
@@ -211,7 +263,7 @@ function RecentFilesPanel:get_item_at(px, py)
   end
 end
 
-function RecentFilesPanel:draw()
+function RecentDirsPanel:draw()
   if not self.visible then
     return
   end
@@ -220,9 +272,9 @@ function RecentFilesPanel:draw()
 
   local ox, oy = self:get_content_offset()
   local line_h = self:get_line_height()
-  local header_text = "Recent Files"
-  if #state.files > 0 then
-    header_text = header_text .. " (" .. tostring(#state.files) .. ")"
+  local header_text = "Recent Directories"
+  if #state.dirs > 0 then
+    header_text = header_text .. " (" .. tostring(#state.dirs) .. ")"
   end
 
   common.draw_text(
@@ -253,7 +305,7 @@ function RecentFilesPanel:draw()
         renderer.draw_rect(self.position.x, y, self.size.x, h, style.line_highlight)
       end
 
-      local color = state.files[index] and style.text or style.dim
+      local color = state.dirs[index] and style.text or style.dim
       renderer.draw_text(style.font, text, x, y + math.floor(style.padding.y / 2), color)
     end
   end
@@ -261,13 +313,13 @@ function RecentFilesPanel:draw()
   self:draw_scrollbar()
 end
 
-function RecentFilesPanel:on_mouse_left()
-  RecentFilesPanel.super.on_mouse_left(self)
+function RecentDirsPanel:on_mouse_left()
+  RecentDirsPanel.super.on_mouse_left(self)
   self.hovered_index = nil
 end
 
-function RecentFilesPanel:on_mouse_moved(px, py, dx, dy)
-  if RecentFilesPanel.super.on_mouse_moved(self, px, py, dx, dy) then
+function RecentDirsPanel:on_mouse_moved(px, py, dx, dy)
+  if RecentDirsPanel.super.on_mouse_moved(self, px, py, dx, dy) then
     return true
   end
 
@@ -276,36 +328,33 @@ function RecentFilesPanel:on_mouse_moved(px, py, dx, dy)
   return index ~= nil
 end
 
-function RecentFilesPanel:on_mouse_pressed(button, px, py, clicks)
+function RecentDirsPanel:on_mouse_pressed(button, px, py, clicks)
   if not self.visible then
     return false
   end
 
-  local caught = RecentFilesPanel.super.on_mouse_pressed(self, button, px, py, clicks)
+  local caught = RecentDirsPanel.super.on_mouse_pressed(self, button, px, py, clicks)
   if caught then
     return caught
   end
 
   local index = self:get_item_at(px, py)
-  if not index or not state.files[index] then
+  if not index or not state.dirs[index] then
     return false
   end
 
-  local abs_filename = common.home_expand(state.files[index])
-  core.root_view:open_doc(core.open_doc(abs_filename))
-  return true
+  return open_directory(state.dirs[index])
 end
 
 if not state.commands_added then
   command.add(nil, {
-    ["recentfiles-panel:toggle"] = function()
+    ["recentdirs-panel:toggle"] = function()
       if state.view then
         state.view:toggle_visible()
       end
     end,
-    ["recentfiles-panel:clear"] = function()
-      command.perform("core:open-recent-file-clear")
-      state.files = {}
+    ["recentdirs-panel:clear"] = function()
+      state.dirs = {}
     end,
   })
 
@@ -313,11 +362,11 @@ if not state.commands_added then
 end
 
 if state.view and core.root_view:get_node_for_view(state.view) then
-  state.view.visible = config.plugins.recentfiles_panel.visible
+  state.view.visible = config.plugins.recentdirs_panel.visible
   return state
 end
 
-state.view = RecentFilesPanel()
+state.view = RecentDirsPanel()
 do
   local anchor_node, split_dir = get_anchor_node_and_dir()
   state.node = anchor_node:split(split_dir, state.view, { y = true }, { y = true })

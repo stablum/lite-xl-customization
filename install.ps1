@@ -6,13 +6,18 @@ param(
 $ErrorActionPreference = "Stop"
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$sourceFile = Join-Path $scriptDir "recentfiles_panel.lua"
+$sourceFiles = @(
+  "recentdirs_panel.lua",
+  "recentfiles_panel.lua"
+) | ForEach-Object { Join-Path $scriptDir $_ }
 
-if (-not (Test-Path -LiteralPath $sourceFile -PathType Leaf)) {
-  throw "Could not find plugin source file: $sourceFile"
+foreach ($sourceFile in $sourceFiles) {
+  if (-not (Test-Path -LiteralPath $sourceFile -PathType Leaf)) {
+    throw "Could not find plugin source file: $sourceFile"
+  }
 }
 
-function Resolve-TargetFile {
+function Resolve-TargetDirectory {
   param(
     [string]$RequestedDestination
   )
@@ -20,15 +25,11 @@ function Resolve-TargetFile {
   if ($RequestedDestination) {
     $expandedDestination = [Environment]::ExpandEnvironmentVariables($RequestedDestination)
 
-    if (Test-Path -LiteralPath $expandedDestination -PathType Container) {
-      return Join-Path $expandedDestination "recentfiles_panel.lua"
-    }
-
     if ([IO.Path]::GetExtension($expandedDestination) -ieq ".lua") {
-      return $expandedDestination
+      return Split-Path -Parent $expandedDestination
     }
 
-    return Join-Path $expandedDestination "recentfiles_panel.lua"
+    return $expandedDestination
   }
 
   $candidateDirs = @(
@@ -40,21 +41,23 @@ function Resolve-TargetFile {
   foreach ($candidateDir in $candidateDirs) {
     $configDir = Split-Path -Parent $candidateDir
     if (Test-Path -LiteralPath $configDir -PathType Container) {
-      return Join-Path $candidateDir "recentfiles_panel.lua"
+      return $candidateDir
     }
   }
 
-  return Join-Path (Join-Path $HOME ".config\lite-xl\plugins") "recentfiles_panel.lua"
+  return Join-Path $HOME ".config\lite-xl\plugins"
 }
 
-$targetFile = Resolve-TargetFile -RequestedDestination $Destination
-$targetDir = Split-Path -Parent $targetFile
+$targetDir = Resolve-TargetDirectory -RequestedDestination $Destination
 
 if (-not (Test-Path -LiteralPath $targetDir -PathType Container)) {
   New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
 }
 
-if ($PSCmdlet.ShouldProcess($targetFile, "Install recentfiles_panel.lua")) {
-  Copy-Item -LiteralPath $sourceFile -Destination $targetFile -Force
-  Write-Host "Installed recentfiles_panel.lua to $targetFile"
+foreach ($sourceFile in $sourceFiles) {
+  $targetFile = Join-Path $targetDir (Split-Path -Leaf $sourceFile)
+  if ($PSCmdlet.ShouldProcess($targetFile, "Install $(Split-Path -Leaf $sourceFile)")) {
+    Copy-Item -LiteralPath $sourceFile -Destination $targetFile -Force
+    Write-Host "Installed $(Split-Path -Leaf $sourceFile) to $targetFile"
+  }
 }
