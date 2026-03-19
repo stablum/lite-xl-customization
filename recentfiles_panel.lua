@@ -113,6 +113,78 @@ local function get_anchor_node_and_dir()
   return TreeView.node, "down"
 end
 
+local function split_path(path)
+  local prefix, suffix = path:match("^(.*[/\\])([^/\\]+)$")
+  if prefix and suffix then
+    return prefix, suffix
+  end
+  return "", path
+end
+
+local function truncate_left(font, text, max_width)
+  if not text or text == "" or max_width <= 0 then
+    return ""
+  end
+
+  if font:get_width(text) <= max_width then
+    return text
+  end
+
+  local ellipsis = "..."
+  if font:get_width(ellipsis) > max_width then
+    return ""
+  end
+
+  for i = #text, 1, -1 do
+    local candidate = ellipsis .. text:sub(i)
+    if font:get_width(candidate) <= max_width then
+      return candidate
+    end
+  end
+
+  return ellipsis
+end
+
+local function get_path_colors(is_hovered)
+  local panel_config = config.plugins.recentfiles_panel
+  if is_hovered then
+    return panel_config.hover_path_prefix_color
+        or panel_config.path_prefix_color
+        or style.text,
+      panel_config.hover_path_suffix_color
+        or panel_config.path_suffix_color
+        or style.accent
+  end
+
+  return panel_config.path_prefix_color or style.dim,
+    panel_config.path_suffix_color or style.text
+end
+
+local function draw_path_text(path, x, y, width, is_hovered)
+  local prefix, suffix = split_path(path)
+  local prefix_color, suffix_color = get_path_colors(is_hovered)
+  local text_y = y + math.floor(style.padding.y / 2)
+  local suffix_width = style.font:get_width(suffix)
+
+  if suffix_width >= width then
+    local clipped_suffix = truncate_left(style.font, suffix, width)
+    if clipped_suffix ~= "" then
+      renderer.draw_text(style.font, clipped_suffix, x, text_y, suffix_color)
+    end
+    return
+  end
+
+  local prefix_width = math.max(0, width - suffix_width)
+  local clipped_prefix = truncate_left(style.font, prefix, prefix_width)
+  local draw_x = x
+
+  if clipped_prefix ~= "" then
+    draw_x = renderer.draw_text(style.font, clipped_prefix, draw_x, text_y, prefix_color)
+  end
+
+  renderer.draw_text(style.font, suffix, draw_x, text_y, suffix_color)
+end
+
 if not state.initialized then
   for i, path in ipairs(recent_files_module) do
     state.files[i] = path
@@ -293,8 +365,11 @@ function RecentFilesPanel:draw()
         renderer.draw_rect(self.position.x, y, self.size.x, h, style.line_highlight)
       end
 
-      local color = state.files[index] and style.text or style.dim
-      renderer.draw_text(style.font, text, x, y + math.floor(style.padding.y / 2), color)
+      if state.files[index] then
+        draw_path_text(text, x, y, w, index == self.hovered_index)
+      else
+        renderer.draw_text(style.font, text, x, y + math.floor(style.padding.y / 2), style.dim)
+      end
     end
   end
 

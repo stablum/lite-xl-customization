@@ -75,15 +75,25 @@ The plugins register these commands:
 Example Lite XL user config:
 
 ```lua
+local common = require "core.common"
+
 config.plugins.recentdirs_panel = {
   visible = true,
   max_visible_items = 8,
   max_tracked_items = 100,
+  path_prefix_color = { common.color "#553333" },
+  path_suffix_color = { common.color "#ff0000" },
+  hover_path_prefix_color = { common.color "#aa6666" },
+  hover_path_suffix_color = { common.color "#ff6666" },
 }
 
 config.plugins.recentfiles_panel = {
   visible = true,
   max_visible_items = 10,
+  path_prefix_color = { common.color "#553333" },
+  path_suffix_color = { common.color "#ff0000" },
+  hover_path_prefix_color = { common.color "#aa6666" },
+  hover_path_suffix_color = { common.color "#ff6666" },
 }
 ```
 
