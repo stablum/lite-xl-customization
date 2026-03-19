@@ -17,14 +17,22 @@ Run the installer from this repository:
 
 The installer now shows a selection menu so you can install:
 
-- everything
 - `recentdirs_panel.lua` only
 - `recentfiles_panel.lua` only
+- all plugins
+
+When you run `.\install.ps1` in a console, the installer uses an interactive menu:
+
+- `Up` and `Down` move the selection
+- `Enter` installs the selected option
+- `Esc` cancels
+
+The default highlighted option is `Recent Directories`, not `All`.
 
 For non-interactive use, you can choose explicitly:
 
 ```powershell
-.\install.ps1 -Plugin Everything
+.\install.ps1 -Plugin All
 .\install.ps1 -Plugin RecentDirs
 .\install.ps1 -Plugin RecentFiles
 ```
