@@ -194,6 +194,108 @@ local function truncate_left(font, text, max_width)
   return ellipsis
 end
 
+local function split_prefix_components(prefix)
+  local separator = prefix:find("\\", 1, true) and "\\" or "/"
+  local root = ""
+  local rest = prefix
+
+  if rest:match("^%a:[/\\]") then
+    root = rest:sub(1, 3)
+    rest = rest:sub(4)
+  elseif rest:match("^~[/\\]") then
+    root = rest:sub(1, 2)
+    rest = rest:sub(3)
+  elseif rest:match("^[/\\][/\\]") then
+    root = separator .. separator
+    rest = rest:sub(3)
+  elseif rest:match("^[/\\]") then
+    root = separator
+    rest = rest:sub(2)
+  end
+
+  rest = rest:gsub("[/\\]+$", "")
+
+  local components = {}
+  for part in rest:gmatch("[^/\\]+") do
+    table.insert(components, part)
+  end
+
+  return root, components, separator
+end
+
+local function join_prefix(root, components, separator)
+  if #components == 0 then
+    return root
+  end
+
+  local text = root
+  for _, component in ipairs(components) do
+    text = text .. component .. separator
+  end
+  return text
+end
+
+local function abbreviate_component(component)
+  if #component <= 1 then
+    return component
+  end
+  return component:sub(1, 1)
+end
+
+local function compact_prefix(prefix, max_width)
+  if prefix == "" or max_width <= 0 then
+    return ""
+  end
+
+  if style.font:get_width(prefix) <= max_width then
+    return prefix
+  end
+
+  local root, components, separator = split_prefix_components(prefix)
+  if #components == 0 then
+    return truncate_left(style.font, prefix, max_width)
+  end
+
+  local abbreviated = {}
+  for i, component in ipairs(components) do
+    abbreviated[i] = component
+  end
+
+  for i = 1, #components do
+    abbreviated[i] = abbreviate_component(components[i])
+    local candidate = join_prefix(root, abbreviated, separator)
+    if style.font:get_width(candidate) <= max_width then
+      return candidate
+    end
+  end
+
+  for collapsed = 1, #components do
+    local remaining = {}
+    for i = collapsed + 1, #components do
+      table.insert(remaining, components[i])
+    end
+
+    local candidate = root .. "..." .. separator .. join_prefix("", remaining, separator)
+    if style.font:get_width(candidate) <= max_width then
+      return candidate
+    end
+  end
+
+  for collapsed = 1, #components do
+    local remaining = {}
+    for i = collapsed + 1, #components do
+      table.insert(remaining, components[i])
+    end
+
+    local candidate = "..." .. separator .. join_prefix("", remaining, separator)
+    if style.font:get_width(candidate) <= max_width then
+      return candidate
+    end
+  end
+
+  return truncate_left(style.font, prefix, max_width)
+end
+
 local function get_path_colors(is_hovered)
   local panel_config = config.plugins.recentdirs_panel
   if is_hovered then
@@ -224,7 +326,7 @@ local function draw_path_text(path, x, y, width, is_hovered)
   end
 
   local prefix_width = math.max(0, width - suffix_width)
-  local clipped_prefix = truncate_left(style.font, prefix, prefix_width)
+  local clipped_prefix = compact_prefix(prefix, prefix_width)
   local draw_x = x
 
   if clipped_prefix ~= "" then
