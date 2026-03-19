@@ -185,16 +185,6 @@ end
 
 function RecentFilesPanel:set_target_size(axis, value)
   if axis == "y" then
-    local node, parent = get_parent_split_for_view(self)
-    if node and parent and parent.type == "vsplit" and parent.b == node and parent.a then
-      local top_view = parent.a.active_view
-      if top_view and top_view.size then
-        local max_bottom = math.max(0, parent.size.y - top_view.size.y - style.divider_size)
-        set_panel_height(self, math.min(math.max(0, value), max_bottom))
-        return true
-      end
-    end
-
     set_panel_height(self, value)
     return true
   end

@@ -243,6 +243,11 @@ function RecentDirsPanel:set_target_size(axis, value)
       return true
     end
 
+    if core.root_view.dragged_divider ~= parent then
+      set_panel_height(self, value)
+      return true
+    end
+
     local sibling_view = parent.b and parent.b.active_view
     if not sibling_view then
       set_panel_height(self, value)
