@@ -186,6 +186,7 @@ function RecentDirsPanel:new()
   self.scrollable = true
   self.visible = config.plugins.recentdirs_panel.visible
   self.init_size = true
+  self.target_size = 0
   self.hovered_index = nil
 end
 
@@ -211,17 +212,33 @@ function RecentDirsPanel:get_scrollable_size()
     + style.padding.y
 end
 
+function RecentDirsPanel:set_target_size(axis, value)
+  if axis == "y" then
+    self.target_size = math.max(0, value)
+    return true
+  end
+end
+
 function RecentDirsPanel:toggle_visible()
   self.visible = not self.visible
+  if self.visible and self.target_size <= 0 then
+    self.target_size = self:get_header_height()
+      + self:get_line_height() * self:get_visible_lines()
+      + style.padding.y
+  end
   core.redraw = true
 end
 
 function RecentDirsPanel:update()
   local dest_size = 0
   if self.visible then
-    dest_size = self:get_header_height()
+    local default_size = self:get_header_height()
       + self:get_line_height() * self:get_visible_lines()
       + style.padding.y
+    if self.target_size <= 0 then
+      self.target_size = default_size
+    end
+    dest_size = self.target_size
   end
 
   if self.init_size then
