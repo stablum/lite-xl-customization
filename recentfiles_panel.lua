@@ -62,7 +62,7 @@ local function get_view_node(view)
     return nil
   end
 
-  return core.root_view:get_node_for_view(view)
+  return core.root_view.root_node:get_node_for_view(view)
 end
 
 local function get_bottom_leaf(node)
@@ -312,7 +312,7 @@ if not state.commands_added then
   state.commands_added = true
 end
 
-if state.view and core.root_view:get_node_for_view(state.view) then
+if state.view and core.root_view.root_node:get_node_for_view(state.view) then
   state.view.visible = config.plugins.recentfiles_panel.visible
   return state
 end
