@@ -18,8 +18,8 @@ function Resolve-PluginSelection {
   }
 
   if ($RequestedPlugin -and $RequestedPlugin -ne "Menu") {
-    if ($RequestedPlugin -notin @("All", "RecentDirs", "RecentFiles")) {
-      throw "Invalid plugin selection '$RequestedPlugin'. Use Menu, All, RecentDirs, or RecentFiles."
+    if ($RequestedPlugin -notin @("All", "RecentDirs", "RecentFiles", "Style")) {
+      throw "Invalid plugin selection '$RequestedPlugin'. Use Menu, All, RecentDirs, RecentFiles, or Style."
     }
     return $RequestedPlugin
   }
@@ -38,7 +38,12 @@ function Resolve-PluginSelection {
     [PSCustomObject]@{
       Key = "All"
       Label = "All"
-      Description = "Install both plugins."
+      Description = "Install all plugins, including style preferences."
+    },
+    [PSCustomObject]@{
+      Key = "Style"
+      Label = "Style Preferences"
+      Description = "Install redblack_style.lua only."
     },
     [PSCustomObject]@{
       Key = $null
@@ -101,7 +106,8 @@ function Resolve-PluginSelection {
   $choices = @(
     (New-Object System.Management.Automation.Host.ChoiceDescription "Recent &Directories", "Install recentdirs_panel.lua only."),
     (New-Object System.Management.Automation.Host.ChoiceDescription "Recent &Files", "Install recentfiles_panel.lua only."),
-    (New-Object System.Management.Automation.Host.ChoiceDescription "&All", "Install both plugins."),
+    (New-Object System.Management.Automation.Host.ChoiceDescription "&Style", "Install redblack_style.lua only."),
+    (New-Object System.Management.Automation.Host.ChoiceDescription "&All", "Install all plugins, including style preferences."),
     (New-Object System.Management.Automation.Host.ChoiceDescription "&Cancel", "Exit without installing.")
   )
 
@@ -115,7 +121,8 @@ function Resolve-PluginSelection {
   switch ($selection) {
     0 { return "RecentDirs" }
     1 { return "RecentFiles" }
-    2 { return "All" }
+    2 { return "Style" }
+    3 { return "All" }
     default { return $null }
   }
 }
@@ -132,14 +139,19 @@ function Resolve-SourceFiles {
     "RecentFiles" {
       return @("recentfiles_panel.lua")
     }
+    "Style" {
+      return @("redblack_style.lua")
+    }
     "All" {
       return @(
+        "redblack_style.lua",
         "recentdirs_panel.lua",
         "recentfiles_panel.lua"
       )
     }
     default {
       return @(
+        "redblack_style.lua",
         "recentdirs_panel.lua",
         "recentfiles_panel.lua"
       )

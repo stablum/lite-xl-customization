@@ -1,11 +1,12 @@
 # Lite XL Customization
 
-This repository contains two single-file Lite XL plugins:
+This repository contains three single-file Lite XL plugins:
 
+- `redblack_style.lua` applies your black-and-red style preferences as an optional visual theme plugin.
 - `recentdirs_panel.lua` adds a Recent Directories panel above the recent files panel. Clicking a directory switches the current Lite XL project so the treeview opens that directory.
 - `recentfiles_panel.lua` adds a Recent Files panel to the treeview area and lets you reopen recently accessed files.
 
-Both plugins depend on Lite XL's built-in `treeview` and `recentfiles` plugins.
+The panel plugins depend on Lite XL's built-in `treeview` and `recentfiles` plugins.
 
 ## Installation
 
@@ -17,6 +18,7 @@ Run the installer from this repository:
 
 The installer now shows a selection menu so you can install:
 
+- `redblack_style.lua` only
 - `recentdirs_panel.lua` only
 - `recentfiles_panel.lua` only
 - all plugins
@@ -35,6 +37,7 @@ For non-interactive use, you can choose explicitly:
 .\install.ps1 -Plugin All
 .\install.ps1 -Plugin RecentDirs
 .\install.ps1 -Plugin RecentFiles
+.\install.ps1 -Plugin Style
 ```
 
 It copies the selected plugin file or files into the first matching Lite XL plugins directory from this list:
