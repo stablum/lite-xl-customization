@@ -122,6 +122,29 @@ local function get_bottom_leaf(node)
   return leaf
 end
 
+local function get_treeview_content_leaf()
+  local node = TreeView.node
+  if node and node.type == "vsplit" and node.a then
+    return get_bottom_leaf(node.a) or node.a
+  end
+  return node
+end
+
+local function set_panel_height(view, value)
+  view.target_size = math.max(0, value)
+  view.size.y = view.target_size
+end
+
+local function get_parent_split_for_view(view)
+  local node = get_view_node(view)
+  if not node then
+    return nil, nil
+  end
+
+  local parent = node:get_parent_node(core.root_view.root_node)
+  return node, parent
+end
+
 local function get_anchor_node_and_dir()
   local recent_files_state = rawget(_G, "__recentfiles_panel_state")
   if recent_files_state and recent_files_state.view then
@@ -131,9 +154,9 @@ local function get_anchor_node_and_dir()
     end
   end
 
-  local bottom_leaf = get_bottom_leaf(TreeView.node.b)
-  if bottom_leaf then
-    return bottom_leaf, "up"
+  local content_leaf = get_treeview_content_leaf()
+  if content_leaf then
+    return content_leaf, "down"
   end
 
   return TreeView.node, "down"
@@ -214,7 +237,38 @@ end
 
 function RecentDirsPanel:set_target_size(axis, value)
   if axis == "y" then
-    self.target_size = math.max(0, value)
+    local node, parent = get_parent_split_for_view(self)
+    if not node or not parent or parent.type ~= "vsplit" or parent.a ~= node then
+      set_panel_height(self, value)
+      return true
+    end
+
+    local sibling_view = parent.b and parent.b.active_view
+    if not sibling_view then
+      set_panel_height(self, value)
+      return true
+    end
+
+    local total_height = math.max(0, parent.size.y)
+    local new_top = common.clamp(value, 0, total_height)
+    local new_bottom
+
+    if new_top < 1 then
+      new_bottom = total_height
+    else
+      new_bottom = math.max(0, total_height - style.divider_size - new_top)
+      if new_bottom < 1 then
+        new_top = total_height
+        new_bottom = 0
+      end
+    end
+
+    set_panel_height(self, new_top)
+    if type(sibling_view.set_target_size) == "function" then
+      sibling_view:set_target_size("y", new_bottom)
+    elseif type(sibling_view) == "table" and sibling_view.size then
+      sibling_view.size.y = new_bottom
+    end
     return true
   end
 end

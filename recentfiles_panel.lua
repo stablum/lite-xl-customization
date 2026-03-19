@@ -73,6 +73,29 @@ local function get_bottom_leaf(node)
   return leaf
 end
 
+local function get_treeview_content_leaf()
+  local node = TreeView.node
+  if node and node.type == "vsplit" and node.a then
+    return get_bottom_leaf(node.a) or node.a
+  end
+  return node
+end
+
+local function set_panel_height(view, value)
+  view.target_size = math.max(0, value)
+  view.size.y = view.target_size
+end
+
+local function get_parent_split_for_view(view)
+  local node = get_view_node(view)
+  if not node then
+    return nil, nil
+  end
+
+  local parent = node:get_parent_node(core.root_view.root_node)
+  return node, parent
+end
+
 local function get_anchor_node_and_dir()
   local recent_dirs_state = rawget(_G, "__recentdirs_panel_state")
   if recent_dirs_state and recent_dirs_state.view then
@@ -82,9 +105,9 @@ local function get_anchor_node_and_dir()
     end
   end
 
-  local bottom_leaf = get_bottom_leaf(TreeView.node.b)
-  if bottom_leaf then
-    return bottom_leaf, "up"
+  local content_leaf = get_treeview_content_leaf()
+  if content_leaf then
+    return content_leaf, "down"
   end
 
   return TreeView.node, "down"
@@ -162,7 +185,17 @@ end
 
 function RecentFilesPanel:set_target_size(axis, value)
   if axis == "y" then
-    self.target_size = math.max(0, value)
+    local node, parent = get_parent_split_for_view(self)
+    if node and parent and parent.type == "vsplit" and parent.b == node and parent.a then
+      local top_view = parent.a.active_view
+      if top_view and top_view.size then
+        local max_bottom = math.max(0, parent.size.y - top_view.size.y - style.divider_size)
+        set_panel_height(self, math.min(math.max(0, value), max_bottom))
+        return true
+      end
+    end
+
+    set_panel_height(self, value)
     return true
   end
 end
