@@ -15,7 +15,21 @@ Run the installer from this repository:
 .\install.ps1
 ```
 
-By default, the installer copies both plugin files into the first matching Lite XL plugins directory from this list:
+The installer now shows a selection menu so you can install:
+
+- everything
+- `recentdirs_panel.lua` only
+- `recentfiles_panel.lua` only
+
+For non-interactive use, you can choose explicitly:
+
+```powershell
+.\install.ps1 -Plugin Everything
+.\install.ps1 -Plugin RecentDirs
+.\install.ps1 -Plugin RecentFiles
+```
+
+It copies the selected plugin file or files into the first matching Lite XL plugins directory from this list:
 
 1. `%APPDATA%\lite-xl\plugins`
 2. `%USERPROFILE%\.config\lite-xl\plugins`

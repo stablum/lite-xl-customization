@@ -1,15 +1,80 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
-  [string]$Destination
+  [string]$Destination,
+  [ValidateSet("Menu", "Everything", "All", "RecentDirs", "RecentFiles")]
+  [string]$Plugin = "Menu"
 )
 
 $ErrorActionPreference = "Stop"
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$sourceFiles = @(
-  "recentdirs_panel.lua",
-  "recentfiles_panel.lua"
-) | ForEach-Object { Join-Path $scriptDir $_ }
+
+function Resolve-PluginSelection {
+  param(
+    [string]$RequestedPlugin
+  )
+
+  if ($RequestedPlugin -and $RequestedPlugin -ne "Menu") {
+    return $RequestedPlugin
+  }
+
+  $choices = @(
+    (New-Object System.Management.Automation.Host.ChoiceDescription "&Everything", "Install both plugins."),
+    (New-Object System.Management.Automation.Host.ChoiceDescription "Recent &Directories", "Install recentdirs_panel.lua only."),
+    (New-Object System.Management.Automation.Host.ChoiceDescription "Recent &Files", "Install recentfiles_panel.lua only."),
+    (New-Object System.Management.Automation.Host.ChoiceDescription "&Cancel", "Exit without installing.")
+  )
+
+  $selection = $Host.UI.PromptForChoice(
+    "Plugin Selection",
+    "Choose which Lite XL plugin(s) to install.",
+    $choices,
+    0
+  )
+
+  switch ($selection) {
+    0 { return "Everything" }
+    1 { return "RecentDirs" }
+    2 { return "RecentFiles" }
+    default { return $null }
+  }
+}
+
+function Resolve-SourceFiles {
+  param(
+    [string]$PluginSelection
+  )
+
+  switch ($PluginSelection) {
+    "RecentDirs" {
+      return @("recentdirs_panel.lua")
+    }
+    "RecentFiles" {
+      return @("recentfiles_panel.lua")
+    }
+    "All" {
+      return @(
+        "recentdirs_panel.lua",
+        "recentfiles_panel.lua"
+      )
+    }
+    default {
+      return @(
+        "recentdirs_panel.lua",
+        "recentfiles_panel.lua"
+      )
+    }
+  }
+}
+
+$selectedPlugin = Resolve-PluginSelection -RequestedPlugin $Plugin
+if (-not $selectedPlugin) {
+  Write-Host "Installation canceled."
+  return
+}
+
+$sourceFiles = Resolve-SourceFiles -PluginSelection $selectedPlugin |
+  ForEach-Object { Join-Path $scriptDir $_ }
 
 foreach ($sourceFile in $sourceFiles) {
   if (-not (Test-Path -LiteralPath $sourceFile -PathType Leaf)) {
