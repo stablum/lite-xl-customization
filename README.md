@@ -81,6 +81,7 @@ config.plugins.recentdirs_panel = {
   visible = true,
   max_visible_items = 8,
   max_tracked_items = 100,
+  sort = true,
   path_prefix_color = { common.color "#553333" },
   path_suffix_color = { common.color "#ff0000" },
   hover_path_prefix_color = { common.color "#aa6666" },
@@ -90,12 +91,19 @@ config.plugins.recentdirs_panel = {
 config.plugins.recentfiles_panel = {
   visible = true,
   max_visible_items = 10,
+  sort = false,
   path_prefix_color = { common.color "#553333" },
   path_suffix_color = { common.color "#ff0000" },
+  extension_color = { common.color "#ff6666" },
   hover_path_prefix_color = { common.color "#aa6666" },
   hover_path_suffix_color = { common.color "#ff6666" },
+  hover_extension_color = { common.color "#ffffff" },
 }
 ```
+
+`sort` controls whether the panel shows entries alphabetically or keeps the original recent-item order.
+
+For `recentfiles_panel`, `extension_color` and `hover_extension_color` apply to the full extension token, including the leading `.`.
 
 `custom_settings.lua` currently applies:
 

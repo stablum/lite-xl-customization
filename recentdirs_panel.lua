@@ -21,6 +21,7 @@ config.plugins.recentdirs_panel = common.merge({
   visible = true,
   max_visible_items = 8,
   max_tracked_items = 100,
+  sort = false,
 }, config.plugins.recentdirs_panel)
 
 local state = rawget(_G, "__recentdirs_panel_state")
@@ -61,6 +62,31 @@ local function trim_dirs()
   while #state.dirs > max_dirs do
     table.remove(state.dirs, #state.dirs)
   end
+end
+
+local function get_sorted_copy(items)
+  local sorted = {}
+  for i, item in ipairs(items) do
+    sorted[i] = item
+  end
+
+  table.sort(sorted, function(a, b)
+    local a_lower = a:lower()
+    local b_lower = b:lower()
+    if a_lower == b_lower then
+      return a < b
+    end
+    return a_lower < b_lower
+  end)
+
+  return sorted
+end
+
+local function get_display_dirs()
+  if config.plugins.recentdirs_panel.sort then
+    return get_sorted_copy(state.dirs)
+  end
+  return state.dirs
 end
 
 local function track_file(path)
@@ -485,10 +511,11 @@ function RecentDirsPanel:update()
 end
 
 function RecentDirsPanel:each_item()
+  local dirs = get_display_dirs()
   local ox, oy = self:get_content_offset()
   local line_h = self:get_line_height()
   local header_h = self:get_header_height()
-  local count = math.max(1, #state.dirs)
+  local count = math.max(1, #dirs)
   local x = ox + style.padding.x
   local w = self.size.x - 2 * style.padding.x
   local index = 0
@@ -500,8 +527,9 @@ function RecentDirsPanel:each_item()
     end
 
     local y = oy + header_h + line_h * (index - 1)
-    local text = state.dirs[index] or "(no recent directories yet)"
-    return index, text, x, y, w, line_h
+    local path = dirs[index]
+    local text = path or "(no recent directories yet)"
+    return index, text, x, y, w, line_h, path
   end
 end
 
@@ -549,14 +577,14 @@ function RecentDirsPanel:draw()
   local view_top = self.position.y
   local view_bottom = self.position.y + self.size.y
 
-  for index, text, x, y, w, h in self:each_item() do
+  for index, text, x, y, w, h, path in self:each_item() do
     if y + h >= view_top and y < view_bottom then
       if index == self.hovered_index then
         renderer.draw_rect(self.position.x, y, self.size.x, h, style.line_highlight)
       end
 
-      if state.dirs[index] then
-        draw_path_text(text, x, y, w, index == self.hovered_index)
+      if path then
+        draw_path_text(path, x, y, w, index == self.hovered_index)
       else
         renderer.draw_text(style.font, text, x, y + math.floor(style.padding.y / 2), style.dim)
       end
@@ -592,11 +620,12 @@ function RecentDirsPanel:on_mouse_pressed(button, px, py, clicks)
   end
 
   local index = self:get_item_at(px, py)
-  if not index or not state.dirs[index] then
+  local dirs = get_display_dirs()
+  if not index or not dirs[index] then
     return false
   end
 
-  return open_directory(state.dirs[index])
+  return open_directory(dirs[index])
 end
 
 if not state.commands_added then

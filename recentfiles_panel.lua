@@ -20,6 +20,7 @@ end
 config.plugins.recentfiles_panel = common.merge({
   visible = true,
   max_visible_items = 10,
+  sort = false,
 }, config.plugins.recentfiles_panel)
 
 local state = rawget(_G, "__recentfiles_panel_state")
@@ -55,6 +56,31 @@ local function trim_files()
   while #state.files > max_files do
     table.remove(state.files, #state.files)
   end
+end
+
+local function get_sorted_copy(items)
+  local sorted = {}
+  for i, item in ipairs(items) do
+    sorted[i] = item
+  end
+
+  table.sort(sorted, function(a, b)
+    local a_lower = a:lower()
+    local b_lower = b:lower()
+    if a_lower == b_lower then
+      return a < b
+    end
+    return a_lower < b_lower
+  end)
+
+  return sorted
+end
+
+local function get_display_files()
+  if config.plugins.recentfiles_panel.sort then
+    return get_sorted_copy(state.files)
+  end
+  return state.files
 end
 
 local function get_view_node(view)
@@ -119,6 +145,14 @@ local function split_path(path)
     return prefix, suffix
   end
   return "", path
+end
+
+local function split_suffix_extension(suffix)
+  local stem, extension = suffix:match("^(.*)(%.[^./\\]+)$")
+  if stem and stem ~= "" then
+    return stem, extension
+  end
+  return suffix, ""
 end
 
 local function truncate_left(font, text, max_width)
@@ -255,23 +289,74 @@ local function get_path_colors(is_hovered)
         or style.text,
       panel_config.hover_path_suffix_color
         or panel_config.path_suffix_color
+        or style.accent,
+      panel_config.hover_extension_color
+        or panel_config.extension_color
+        or panel_config.hover_path_suffix_color
+        or panel_config.path_suffix_color
         or style.accent
   end
 
   return panel_config.path_prefix_color or style.dim,
-    panel_config.path_suffix_color or style.text
+    panel_config.path_suffix_color or style.text,
+    panel_config.extension_color
+      or panel_config.path_suffix_color
+      or style.text
+end
+
+local function draw_suffix_segments(basename, extension, x, y, basename_color, extension_color)
+  local draw_x = x
+  if basename ~= "" then
+    draw_x = renderer.draw_text(style.font, basename, draw_x, y, basename_color)
+  end
+  if extension ~= "" then
+    renderer.draw_text(style.font, extension, draw_x, y, extension_color)
+  end
 end
 
 local function draw_path_text(path, x, y, width, is_hovered)
   local prefix, suffix = split_path(path)
-  local prefix_color, suffix_color = get_path_colors(is_hovered)
+  local basename, extension = split_suffix_extension(suffix)
+  local prefix_color, suffix_color, extension_color = get_path_colors(is_hovered)
   local text_y = y + math.floor(style.padding.y / 2)
   local suffix_width = style.font:get_width(suffix)
 
   if suffix_width >= width then
+    if extension ~= "" then
+      local extension_width = style.font:get_width(extension)
+      if extension_width <= width then
+        local basename_width = math.max(0, width - extension_width)
+        local clipped_basename = truncate_left(style.font, basename, basename_width)
+        draw_suffix_segments(
+          clipped_basename,
+          extension,
+          x,
+          text_y,
+          suffix_color,
+          extension_color
+        )
+        return
+      end
+    end
+
     local clipped_suffix = truncate_left(style.font, suffix, width)
     if clipped_suffix ~= "" then
-      renderer.draw_text(style.font, clipped_suffix, x, text_y, suffix_color)
+      if extension ~= ""
+        and #clipped_suffix >= #extension
+        and clipped_suffix:sub(-#extension) == extension
+      then
+        local clipped_basename = clipped_suffix:sub(1, #clipped_suffix - #extension)
+        draw_suffix_segments(
+          clipped_basename,
+          extension,
+          x,
+          text_y,
+          suffix_color,
+          extension_color
+        )
+      else
+        renderer.draw_text(style.font, clipped_suffix, x, text_y, suffix_color)
+      end
     end
     return
   end
@@ -284,7 +369,7 @@ local function draw_path_text(path, x, y, width, is_hovered)
     draw_x = renderer.draw_text(style.font, clipped_prefix, draw_x, text_y, prefix_color)
   end
 
-  renderer.draw_text(style.font, suffix, draw_x, text_y, suffix_color)
+  draw_suffix_segments(basename, extension, draw_x, text_y, suffix_color, extension_color)
 end
 
 if not state.initialized then
@@ -397,10 +482,11 @@ function RecentFilesPanel:update()
 end
 
 function RecentFilesPanel:each_item()
+  local files = get_display_files()
   local ox, oy = self:get_content_offset()
   local line_h = self:get_line_height()
   local header_h = self:get_header_height()
-  local count = math.max(1, #state.files)
+  local count = math.max(1, #files)
   local x = ox + style.padding.x
   local w = self.size.x - 2 * style.padding.x
   local index = 0
@@ -412,8 +498,9 @@ function RecentFilesPanel:each_item()
     end
 
     local y = oy + header_h + line_h * (index - 1)
-    local text = state.files[index] or "(no recent files yet)"
-    return index, text, x, y, w, line_h
+    local path = files[index]
+    local text = path or "(no recent files yet)"
+    return index, text, x, y, w, line_h, path
   end
 end
 
@@ -461,14 +548,14 @@ function RecentFilesPanel:draw()
   local view_top = self.position.y
   local view_bottom = self.position.y + self.size.y
 
-  for index, text, x, y, w, h in self:each_item() do
+  for index, text, x, y, w, h, path in self:each_item() do
     if y + h >= view_top and y < view_bottom then
       if index == self.hovered_index then
         renderer.draw_rect(self.position.x, y, self.size.x, h, style.line_highlight)
       end
 
-      if state.files[index] then
-        draw_path_text(text, x, y, w, index == self.hovered_index)
+      if path then
+        draw_path_text(path, x, y, w, index == self.hovered_index)
       else
         renderer.draw_text(style.font, text, x, y + math.floor(style.padding.y / 2), style.dim)
       end
@@ -504,11 +591,12 @@ function RecentFilesPanel:on_mouse_pressed(button, px, py, clicks)
   end
 
   local index = self:get_item_at(px, py)
-  if not index or not state.files[index] then
+  local files = get_display_files()
+  if not index or not files[index] then
     return false
   end
 
-  local abs_filename = common.home_expand(state.files[index])
+  local abs_filename = common.home_expand(files[index])
   core.root_view:open_doc(core.open_doc(abs_filename))
   return true
 end
