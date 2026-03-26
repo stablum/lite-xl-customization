@@ -17,3 +17,8 @@ local recentfiles_state = rawget(_G, "__recentfiles_panel_state")
 if recentfiles_state and recentfiles_state.view then
   recentfiles_state.view.visible = config.plugins.recentfiles_panel.visible
 end
+
+config.plugins.linewrapping.enable_by_default = true
+config.plugins.linewrapping.mode = "word"   -- "word" or "letter"
+config.plugins.linewrapping.indent = true   -- keeps wrapped lines aligned nicely
+config.plugins.linewrapping.guide = true   -- optional; set true if you want a wrap guide line

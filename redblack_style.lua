@@ -27,5 +27,5 @@ config.plugins.recentfiles_panel = common.merge(config.plugins.recentfiles_panel
   hover_path_prefix_color = { common.color "#773300" },
   hover_path_suffix_color = { common.color "#ff0000" },
   extension_color = { common.color "#0000ff" },
-  hover_extension_color = { common.color "#aaaaff" },
+  hover_extension_color = { common.color "#55ddff" },
 })
