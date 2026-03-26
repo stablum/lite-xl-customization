@@ -534,6 +534,11 @@ function RecentDirsPanel:each_item()
 end
 
 function RecentDirsPanel:get_item_at(px, py)
+  local content_top = self.position.y + self:get_header_height()
+  if py < content_top then
+    return nil
+  end
+
   for index, text, x, y, w, h in self:each_item() do
     if px >= x and px <= x + w and py >= y and py <= y + h then
       return index, text, x, y, w, h
@@ -548,33 +553,15 @@ function RecentDirsPanel:draw()
 
   self:draw_background(style.background2)
 
-  local ox, oy = self:get_content_offset()
   local line_h = self:get_line_height()
+  local header_h = self:get_header_height()
+  local header_x = self.position.x + style.padding.x
+  local header_y = self.position.y
   local header_text = "Recent Directories"
   if #state.dirs > 0 then
     header_text = header_text .. " (" .. tostring(#state.dirs) .. ")"
   end
-
-  common.draw_text(
-    style.font,
-    style.accent,
-    header_text,
-    "left",
-    ox + style.padding.x,
-    oy,
-    self.size.x - 2 * style.padding.x,
-    line_h
-  )
-
-  renderer.draw_rect(
-    self.position.x,
-    oy + self:get_header_height() - style.divider_size,
-    self.size.x,
-    style.divider_size,
-    style.divider
-  )
-
-  local view_top = self.position.y
+  local view_top = self.position.y + header_h
   local view_bottom = self.position.y + self.size.y
 
   for index, text, x, y, w, h, path in self:each_item() do
@@ -590,6 +577,27 @@ function RecentDirsPanel:draw()
       end
     end
   end
+
+  renderer.draw_rect(self.position.x, self.position.y, self.size.x, header_h, style.background2)
+
+  common.draw_text(
+    style.font,
+    style.accent,
+    header_text,
+    "left",
+    header_x,
+    header_y,
+    self.size.x - 2 * style.padding.x,
+    line_h
+  )
+
+  renderer.draw_rect(
+    self.position.x,
+    self.position.y + header_h - style.divider_size,
+    self.size.x,
+    style.divider_size,
+    style.divider
+  )
 
   self:draw_scrollbar()
 end
