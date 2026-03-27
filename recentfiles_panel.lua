@@ -166,6 +166,40 @@ local function split_suffix_extension(suffix)
   return suffix, ""
 end
 
+local function utf8_next_char_index(text, index)
+  local byte = text:byte(index)
+  if not byte then
+    return nil
+  end
+
+  if byte < 0x80 then
+    return index + 1
+  end
+  if byte >= 0xC2 and byte <= 0xDF then
+    return index + 2
+  end
+  if byte >= 0xE0 and byte <= 0xEF then
+    return index + 3
+  end
+  if byte >= 0xF0 and byte <= 0xF4 then
+    return index + 4
+  end
+
+  return index + 1
+end
+
+local function utf8_char_starts(text)
+  local starts = {}
+  local index = 1
+
+  while index <= #text do
+    table.insert(starts, index)
+    index = utf8_next_char_index(text, index)
+  end
+
+  return starts
+end
+
 local function truncate_left(font, text, max_width)
   if not text or text == "" or max_width <= 0 then
     return ""
@@ -180,8 +214,9 @@ local function truncate_left(font, text, max_width)
     return ""
   end
 
-  for i = #text, 1, -1 do
-    local candidate = ellipsis .. text:sub(i)
+  local starts = utf8_char_starts(text)
+  for i = #starts, 1, -1 do
+    local candidate = ellipsis .. text:sub(starts[i])
     if font:get_width(candidate) <= max_width then
       return candidate
     end
@@ -232,10 +267,16 @@ local function join_prefix(root, components, separator)
 end
 
 local function abbreviate_component(component)
-  if #component <= 1 then
+  if component == "" then
     return component
   end
-  return component:sub(1, 1)
+
+  local next_index = utf8_next_char_index(component, 1)
+  if not next_index or next_index > #component then
+    return component
+  end
+
+  return component:sub(1, next_index - 1)
 end
 
 local function compact_prefix(prefix, max_width)
