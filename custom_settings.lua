@@ -1,6 +1,72 @@
 -- mod-version:3
 
 local config = require "core.config"
+local style = require "core.style"
+
+local function file_exists(path)
+  if not path or path == "" then
+    return false
+  end
+
+  local file = io.open(path, "rb")
+  if file then
+    file:close()
+    return true
+  end
+
+  return false
+end
+
+local function load_font_if_exists(path, size)
+  if not file_exists(path) then
+    return nil
+  end
+
+  local ok, font = pcall(renderer.font.load, path, size)
+  if ok then
+    return font
+  end
+
+  return nil
+end
+
+local function build_font_stack(current_font)
+  if not current_font then
+    return nil
+  end
+
+  local size = current_font:get_size()
+  local localappdata = os.getenv("LOCALAPPDATA") or ""
+  local windir = os.getenv("WINDIR") or "C:\\Windows"
+
+  local carbon = load_font_if_exists(
+    localappdata .. PATHSEP .. "Microsoft" .. PATHSEP .. "Windows" .. PATHSEP .. "Fonts" .. PATHSEP .. "carbonplus-regular-bl.otf",
+    size
+  )
+  local symbol_font = load_font_if_exists(
+    windir .. PATHSEP .. "Fonts" .. PATHSEP .. "seguisym.ttf",
+    size
+  )
+
+  local fonts = {}
+  if carbon then
+    table.insert(fonts, carbon)
+  else
+    table.insert(fonts, current_font)
+  end
+  if symbol_font then
+    table.insert(fonts, symbol_font)
+  end
+
+  if #fonts == 1 then
+    return fonts[1]
+  end
+
+  return renderer.font.group(fonts)
+end
+
+style.font = build_font_stack(style.font) or style.font
+style.big_font = build_font_stack(style.big_font) or style.big_font
 
 config.plugins.autoreload = config.plugins.autoreload or {}
 config.plugins.autoreload.always_show_nagview = false

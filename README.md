@@ -108,6 +108,11 @@ For `recentfiles_panel`, `extension_color` and `hover_extension_color` apply to 
 `custom_settings.lua` currently applies:
 
 ```lua
+style.font = renderer.font.group({
+  renderer.font.load(os.getenv("LOCALAPPDATA") .. "\\Microsoft\\Windows\\Fonts\\carbonplus-regular-bl.otf", 15 * SCALE),
+  renderer.font.load((os.getenv("WINDIR") or "C:\\Windows") .. "\\Fonts\\seguisym.ttf", 15 * SCALE),
+})
+
 config.plugins.autoreload = {
   always_show_nagview = false,
 }
