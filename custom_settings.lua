@@ -3,6 +3,9 @@
 local config = require "core.config"
 local style = require "core.style"
 
+local ui_font_size = 15 * SCALE
+local big_ui_font_size = ui_font_size * (46 / 15)
+
 local function file_exists(path)
   if not path or path == "" then
     return false
@@ -30,12 +33,12 @@ local function load_font_if_exists(path, size)
   return nil
 end
 
-local function build_font_stack(current_font)
+local function build_font_stack(current_font, size)
   if not current_font then
     return nil
   end
 
-  local size = current_font:get_size()
+  size = size or current_font:get_size()
   local localappdata = os.getenv("LOCALAPPDATA") or ""
   local windir = os.getenv("WINDIR") or "C:\\Windows"
 
@@ -65,8 +68,8 @@ local function build_font_stack(current_font)
   return renderer.font.group(fonts)
 end
 
-style.font = build_font_stack(style.font) or style.font
-style.big_font = build_font_stack(style.big_font) or style.big_font
+style.font = build_font_stack(style.font, ui_font_size) or style.font
+style.big_font = build_font_stack(style.big_font, big_ui_font_size) or style.big_font
 
 config.plugins.autoreload = config.plugins.autoreload or {}
 config.plugins.autoreload.always_show_nagview = false
