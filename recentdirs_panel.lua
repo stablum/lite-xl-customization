@@ -30,6 +30,7 @@ if not state then
   state = {
     dirs = {},
     initialized = false,
+    managed_treeview_dir = nil,
     open_doc_wrapped = false,
     doc_save_wrapped = false,
     command_perform_wrapped = false,
@@ -102,11 +103,44 @@ local function track_file(path)
   trim_dirs()
 end
 
+local function remove_managed_treeview_dir()
+  local managed_path = state.managed_treeview_dir
+  if not managed_path or managed_path == core.project_dir then
+    state.managed_treeview_dir = nil
+    return
+  end
+
+  if type(core.remove_project_directory) == "function"
+    and type(core.project_dir_by_name) == "function"
+    and core.project_dir_by_name(managed_path)
+  then
+    core.remove_project_directory(managed_path)
+  end
+
+  state.managed_treeview_dir = nil
+end
+
+local function focus_treeview_directory(abs_path)
+  TreeView.visible = true
+
+  for item, _, y in TreeView:each_item() do
+    if item.depth == 0 and item.abs_filename == abs_path then
+      item.expanded = true
+      TreeView:set_selection(item, y)
+      core.redraw = true
+      return true
+    end
+  end
+
+  return false
+end
+
 local function open_directory(path)
   local abs_path = common.home_expand(path)
   if type(system) == "table" and type(system.absolute_path) == "function" then
     abs_path = system.absolute_path(abs_path)
   end
+  abs_path = common.normalize_volume(abs_path) or abs_path
 
   if type(system) == "table" and type(system.get_file_info) == "function" then
     local info = system.get_file_info(abs_path)
@@ -115,23 +149,30 @@ local function open_directory(path)
     end
   end
 
+  if state.managed_treeview_dir and state.managed_treeview_dir ~= abs_path then
+    remove_managed_treeview_dir()
+  end
+
   if abs_path == core.project_dir then
-    return true
+    return focus_treeview_directory(abs_path)
   end
 
-  if type(core.open_folder_project) ~= "function" then
-    return false
+  local existing_dir = type(core.project_dir_by_name) == "function"
+    and core.project_dir_by_name(abs_path)
+    or nil
+
+  if not existing_dir then
+    if type(core.add_project_directory) ~= "function" then
+      return false
+    end
+
+    core.add_project_directory(abs_path)
+    state.managed_treeview_dir = abs_path
+  elseif state.managed_treeview_dir == abs_path then
+    state.managed_treeview_dir = abs_path
   end
 
-  if type(core.confirm_close_docs) == "function" then
-    core.confirm_close_docs(core.docs, function(dirpath)
-      core.open_folder_project(dirpath)
-    end, abs_path)
-    return true
-  end
-
-  core.open_folder_project(abs_path)
-  return true
+  return focus_treeview_directory(abs_path)
 end
 
 local function get_view_node(view)
