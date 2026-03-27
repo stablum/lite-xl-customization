@@ -50,12 +50,19 @@ if not activity_state then
     file_edit_order = {},
     dir_edit_order = {},
     doc_text_change_wrapped = false,
+    doc_save_wrapped = false,
+    doc_save_listeners = {},
     core_run_wrapped = false,
     persist_loaded = false,
     seeded_from_recent_files = false,
   }
   rawset(_G, "__recent_panels_activity_state", activity_state)
 end
+activity_state.doc_save_wrapped = activity_state.doc_save_wrapped or false
+activity_state.doc_save_listeners = activity_state.doc_save_listeners or {}
+activity_state.core_run_wrapped = activity_state.core_run_wrapped or false
+activity_state.persist_loaded = activity_state.persist_loaded or false
+activity_state.seeded_from_recent_files = activity_state.seeded_from_recent_files or false
 
 local activity_state_path = USERDIR .. PATHSEP .. "recent_edit_activity.lua"
 
@@ -705,7 +712,7 @@ if not activity_state.doc_text_change_wrapped then
   activity_state.doc_text_change_wrapped = true
 end
 
-if not state.doc_save_wrapped then
+if not activity_state.doc_save_wrapped then
   local previous_doc_save = Doc.save
   Doc.save = function(self, filename, abs_filename)
     local previous_abs_filename = self.abs_filename
@@ -714,13 +721,27 @@ if not state.doc_save_wrapped then
 
     local saved_abs_filename = self.abs_filename or abs_filename
     if saved_abs_filename and (was_new_file or saved_abs_filename ~= previous_abs_filename) then
-      track_file(saved_abs_filename)
       mark_recent_edit(saved_abs_filename)
+    end
+
+    for _, listener in pairs(activity_state.doc_save_listeners) do
+      listener(self, previous_abs_filename, was_new_file, saved_abs_filename, result)
     end
 
     return result
   end
-  state.doc_save_wrapped = true
+  activity_state.doc_save_wrapped = true
+end
+
+activity_state.doc_save_listeners.recentdirs_panel = function(
+  _self,
+  previous_abs_filename,
+  was_new_file,
+  saved_abs_filename
+)
+  if saved_abs_filename and (was_new_file or saved_abs_filename ~= previous_abs_filename) then
+    track_file(saved_abs_filename)
+  end
 end
 
 if not state.command_perform_wrapped then

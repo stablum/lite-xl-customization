@@ -18,8 +18,8 @@ function Resolve-PluginSelection {
   }
 
   if ($RequestedPlugin -and $RequestedPlugin -ne "Menu") {
-    if ($RequestedPlugin -notin @("All", "RecentDirs", "RecentFiles", "Style", "Settings")) {
-      throw "Invalid plugin selection '$RequestedPlugin'. Use Menu, All, RecentDirs, RecentFiles, Style, or Settings."
+    if ($RequestedPlugin -notin @("All", "RecentDirs", "RecentFiles", "TreeviewBadges", "Style", "Settings")) {
+      throw "Invalid plugin selection '$RequestedPlugin'. Use Menu, All, RecentDirs, RecentFiles, TreeviewBadges, Style, or Settings."
     }
     return $RequestedPlugin
   }
@@ -36,9 +36,14 @@ function Resolve-PluginSelection {
       Description = "Install recentfiles_panel.lua only."
     },
     [PSCustomObject]@{
+      Key = "TreeviewBadges"
+      Label = "Treeview Badges"
+      Description = "Install treeview_recent_badges.lua only."
+    },
+    [PSCustomObject]@{
       Key = "All"
       Label = "All"
-      Description = "Install all plugins, including style preferences."
+      Description = "Install all plugins, including style preferences and treeview badges."
     },
     [PSCustomObject]@{
       Key = "Style"
@@ -111,9 +116,10 @@ function Resolve-PluginSelection {
   $choices = @(
     (New-Object System.Management.Automation.Host.ChoiceDescription "Recent &Directories", "Install recentdirs_panel.lua only."),
     (New-Object System.Management.Automation.Host.ChoiceDescription "Recent &Files", "Install recentfiles_panel.lua only."),
+    (New-Object System.Management.Automation.Host.ChoiceDescription "&Treeview Badges", "Install treeview_recent_badges.lua only."),
     (New-Object System.Management.Automation.Host.ChoiceDescription "&Style", "Install redblack_style.lua only."),
     (New-Object System.Management.Automation.Host.ChoiceDescription "S&ettings", "Install custom_settings.lua only."),
-    (New-Object System.Management.Automation.Host.ChoiceDescription "&All", "Install all plugins, including style preferences."),
+    (New-Object System.Management.Automation.Host.ChoiceDescription "&All", "Install all plugins, including style preferences and treeview badges."),
     (New-Object System.Management.Automation.Host.ChoiceDescription "&Cancel", "Exit without installing.")
   )
 
@@ -127,9 +133,10 @@ function Resolve-PluginSelection {
   switch ($selection) {
     0 { return "RecentDirs" }
     1 { return "RecentFiles" }
-    2 { return "Style" }
-    3 { return "Settings" }
-    4 { return "All" }
+    2 { return "TreeviewBadges" }
+    3 { return "Style" }
+    4 { return "Settings" }
+    5 { return "All" }
     default { return $null }
   }
 }
@@ -146,6 +153,9 @@ function Resolve-SourceFiles {
     "RecentFiles" {
       return @("recentfiles_panel.lua")
     }
+    "TreeviewBadges" {
+      return @("treeview_recent_badges.lua")
+    }
     "Style" {
       return @("redblack_style.lua")
     }
@@ -157,7 +167,8 @@ function Resolve-SourceFiles {
         "custom_settings.lua",
         "redblack_style.lua",
         "recentdirs_panel.lua",
-        "recentfiles_panel.lua"
+        "recentfiles_panel.lua",
+        "treeview_recent_badges.lua"
       )
     }
     default {
@@ -165,7 +176,8 @@ function Resolve-SourceFiles {
         "custom_settings.lua",
         "redblack_style.lua",
         "recentdirs_panel.lua",
-        "recentfiles_panel.lua"
+        "recentfiles_panel.lua",
+        "treeview_recent_badges.lua"
       )
     }
   }

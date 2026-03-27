@@ -1,13 +1,14 @@
 # Lite XL Customization
 
-This repository contains four single-file Lite XL plugins:
+This repository contains five single-file Lite XL plugins:
 
 - `custom_settings.lua` applies your preferred plugin configuration overrides, such as `autoreload` and `recentfiles_panel` settings.
 - `redblack_style.lua` applies your black-and-red style preferences as an optional visual theme plugin.
 - `recentdirs_panel.lua` adds a Recent Directories panel above the recent files panel. Clicking a directory reveals it in the treeview without closing your current files.
 - `recentfiles_panel.lua` adds a Recent Files panel to the treeview area and lets you reopen recently accessed files.
+- `treeview_recent_badges.lua` appends configurable recent-edit badges to matching file and directory entries in the treeview.
 
-The panel plugins depend on Lite XL's built-in `treeview` and `recentfiles` plugins.
+`recentfiles_panel.lua` and `recentdirs_panel.lua` depend on Lite XL's built-in `treeview` and `recentfiles` plugins. `treeview_recent_badges.lua` depends on Lite XL's built-in `treeview` plugin.
 
 ## Installation
 
@@ -23,6 +24,7 @@ The installer now shows a selection menu so you can install:
 - `redblack_style.lua` only
 - `recentdirs_panel.lua` only
 - `recentfiles_panel.lua` only
+- `treeview_recent_badges.lua` only
 - all plugins
 
 When you run `.\install.ps1` in a console, the installer uses an interactive menu:
@@ -39,6 +41,7 @@ For non-interactive use, you can choose explicitly:
 .\install.ps1 -Plugin All
 .\install.ps1 -Plugin RecentDirs
 .\install.ps1 -Plugin RecentFiles
+.\install.ps1 -Plugin TreeviewBadges
 .\install.ps1 -Plugin Style
 .\install.ps1 -Plugin Settings
 ```
@@ -99,6 +102,11 @@ config.plugins.recentfiles_panel = {
   hover_path_suffix_color = { common.color "#ff6666" },
   hover_extension_color = { common.color "#ffffff" },
 }
+
+config.plugins.treeview_recent_badges = {
+  edit_badge_hex_codes = { "2059", "2E2C", "2E2B", "003A", "00B7" },
+  edit_badge_color = { common.color "#00ff00" },
+}
 ```
 
 `sort` controls whether the panel shows entries alphabetically or keeps the original recent-item order.
@@ -124,18 +132,23 @@ config.plugins.autoreload = {
 config.plugins.recentfiles_panel = {
   visible = true,
   max_visible_items = 12,
-  edit_badge_hex_codes = { "2D58", "2E2C", "2E2B", "A4FD", "1F784" },
+  edit_badge_hex_codes = { "2059", "2E2C", "2E2B", "003A", "00B7" },
   edit_badge_color = { common.color "#00ff00" },
 }
 
 config.plugins.recentdirs_panel = {
   sort = true,
-  edit_badge_hex_codes = { "2D58", "2E2C", "2E2B", "A4FD", "1F784" },
+  edit_badge_hex_codes = { "2059", "2E2C", "2E2B", "003A", "00B7" },
+  edit_badge_color = { common.color "#00ff00" },
+}
+
+config.plugins.treeview_recent_badges = {
+  edit_badge_hex_codes = { "2059", "2E2C", "2E2B", "003A", "00B7" },
   edit_badge_color = { common.color "#00ff00" },
 }
 ```
 
-`edit_badge_hex_codes` maps the first five most recently edited entries to appended Unicode badges. In `recentdirs_panel`, recency is derived from the most recently edited file in each directory.
+`edit_badge_hex_codes` maps the first five most recently edited entries to appended Unicode badges. In `recentdirs_panel`, recency is derived from the most recently edited file in each directory. In `treeview_recent_badges`, matching treeview file and directory rows get the same badges.
 
 ## License
 

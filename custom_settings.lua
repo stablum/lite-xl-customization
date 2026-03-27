@@ -6,7 +6,7 @@ local style = require "core.style"
 
 local ui_font_size = 20 * SCALE
 local big_ui_font_size = ui_font_size * (46 / 15)
-local recent_edit_badge_hex_codes = { "2D58", "2E2C", "2E2B", "A4FD", "1F784" }
+local recent_edit_badge_hex_codes = { "2059", "2E2C", "2E2B", "003A", "00B7" }
 local recent_edit_badge_color = { common.color "#00ff00" }
 
 local function file_exists(path)
@@ -79,6 +79,7 @@ config.plugins.autoreload.always_show_nagview = false
 
 config.plugins.recentfiles_panel = config.plugins.recentfiles_panel or {}
 config.plugins.recentdirs_panel = config.plugins.recentdirs_panel or {}
+config.plugins.treeview_recent_badges = config.plugins.treeview_recent_badges or {}
 config.plugins.recentfiles_panel.visible = true
 config.plugins.recentfiles_panel.max_visible_items = 12
 config.plugins.recentfiles_panel.edit_badge_hex_codes = recent_edit_badge_hex_codes
@@ -87,6 +88,8 @@ config.plugins.recentfiles_panel.edit_badge_color = recent_edit_badge_color
 config.plugins.recentdirs_panel.sort = true
 config.plugins.recentdirs_panel.edit_badge_hex_codes = recent_edit_badge_hex_codes
 config.plugins.recentdirs_panel.edit_badge_color = recent_edit_badge_color
+config.plugins.treeview_recent_badges.edit_badge_hex_codes = recent_edit_badge_hex_codes
+config.plugins.treeview_recent_badges.edit_badge_color = recent_edit_badge_color
 config.plugins.recentfiles_panel.sort = false
 
 local recentfiles_state = rawget(_G, "__recentfiles_panel_state")
