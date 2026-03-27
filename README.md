@@ -108,7 +108,9 @@ For `recentfiles_panel`, `extension_color` and `hover_extension_color` apply to 
 `custom_settings.lua` currently applies:
 
 ```lua
-local ui_font_size = 15 * SCALE
+local common = require "core.common"
+
+local ui_font_size = 20 * SCALE
 
 style.font = renderer.font.group({
   renderer.font.load(os.getenv("LOCALAPPDATA") .. "\\Microsoft\\Windows\\Fonts\\carbonplus-bold-bl.otf", ui_font_size),
@@ -122,8 +124,18 @@ config.plugins.autoreload = {
 config.plugins.recentfiles_panel = {
   visible = true,
   max_visible_items = 12,
+  edit_badge_hex_codes = { "2D58", "2E2C", "2E2B", "A4FD", "1F784" },
+  edit_badge_color = { common.color "#00ff00" },
+}
+
+config.plugins.recentdirs_panel = {
+  sort = true,
+  edit_badge_hex_codes = { "2D58", "2E2C", "2E2B", "A4FD", "1F784" },
+  edit_badge_color = { common.color "#00ff00" },
 }
 ```
+
+`edit_badge_hex_codes` maps the first five most recently edited entries to appended Unicode badges. In `recentdirs_panel`, recency is derived from the most recently edited file in each directory.
 
 ## License
 

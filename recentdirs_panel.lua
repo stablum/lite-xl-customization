@@ -23,6 +23,8 @@ config.plugins.recentdirs_panel = common.merge({
   max_visible_items = 8,
   max_tracked_items = 100,
   sort = false,
+  edit_badge_hex_codes = { "2D58", "2E2C", "2E2B", "A4FD", "1F784" },
+  edit_badge_color = { common.color "#00ff00" },
 }, config.plugins.recentdirs_panel)
 
 local state = rawget(_G, "__recentdirs_panel_state")
@@ -39,6 +41,17 @@ if not state then
     node = nil,
   }
   rawset(_G, "__recentdirs_panel_state", state)
+end
+
+local activity_state = rawget(_G, "__recent_panels_activity_state")
+if not activity_state then
+  activity_state = {
+    edit_counter = 0,
+    file_edit_order = {},
+    dir_edit_order = {},
+    doc_text_change_wrapped = false,
+  }
+  rawset(_G, "__recent_panels_activity_state", activity_state)
 end
 
 local function insert_unique(t, v)
@@ -64,6 +77,21 @@ local function trim_dirs()
   local max_dirs = config.plugins.recentdirs_panel.max_tracked_items or 100
   while #state.dirs > max_dirs do
     table.remove(state.dirs, #state.dirs)
+  end
+end
+
+local function mark_recent_edit(path)
+  if not path or path == "" then
+    return
+  end
+
+  local encoded_path = common.home_encode(path)
+  activity_state.edit_counter = activity_state.edit_counter + 1
+  activity_state.file_edit_order[encoded_path] = activity_state.edit_counter
+
+  local dir = dirname(encoded_path)
+  if dir then
+    activity_state.dir_edit_order[dir] = activity_state.edit_counter
   end
 end
 
@@ -406,6 +434,99 @@ local function compact_prefix(prefix, max_width)
   return truncate_left(style.font, prefix, max_width)
 end
 
+local function codepoint_to_utf8(codepoint)
+  if not codepoint or codepoint < 0 or codepoint > 0x10FFFF then
+    return nil
+  end
+
+  if codepoint >= 0xD800 and codepoint <= 0xDFFF then
+    return nil
+  end
+
+  if codepoint <= 0x7F then
+    return string.char(codepoint)
+  end
+  if codepoint <= 0x7FF then
+    local b1 = 0xC0 + math.floor(codepoint / 0x40)
+    local b2 = 0x80 + (codepoint % 0x40)
+    return string.char(b1, b2)
+  end
+  if codepoint <= 0xFFFF then
+    local b1 = 0xE0 + math.floor(codepoint / 0x1000)
+    local b2 = 0x80 + (math.floor(codepoint / 0x40) % 0x40)
+    local b3 = 0x80 + (codepoint % 0x40)
+    return string.char(b1, b2, b3)
+  end
+
+  local b1 = 0xF0 + math.floor(codepoint / 0x40000)
+  local b2 = 0x80 + (math.floor(codepoint / 0x1000) % 0x40)
+  local b3 = 0x80 + (math.floor(codepoint / 0x40) % 0x40)
+  local b4 = 0x80 + (codepoint % 0x40)
+  return string.char(b1, b2, b3, b4)
+end
+
+local function hex_code_to_utf8(hex_code)
+  if type(hex_code) == "number" then
+    return codepoint_to_utf8(hex_code)
+  end
+  if type(hex_code) ~= "string" then
+    return nil
+  end
+
+  local normalized = hex_code:match("^%s*(.-)%s*$")
+  normalized = normalized:gsub("^U%+", "")
+  local codepoint = tonumber(normalized, 16)
+  return codepoint_to_utf8(codepoint)
+end
+
+local function get_edit_badge_glyphs(panel_config)
+  local glyphs = {}
+  local hex_codes = panel_config.edit_badge_hex_codes or {}
+
+  for index = 1, 5 do
+    glyphs[index] = hex_code_to_utf8(hex_codes[index]) or ""
+  end
+
+  return glyphs
+end
+
+local function get_edit_rank_lookup(paths, order_lookup)
+  local ranked_paths = {}
+
+  for _, path in ipairs(paths) do
+    local order = order_lookup[path]
+    if order then
+      table.insert(ranked_paths, {
+        path = path,
+        order = order,
+      })
+    end
+  end
+
+  table.sort(ranked_paths, function(a, b)
+    if a.order == b.order then
+      return a.path < b.path
+    end
+    return a.order > b.order
+  end)
+
+  local rank_lookup = {}
+  for index = 1, math.min(#ranked_paths, 5) do
+    rank_lookup[ranked_paths[index].path] = index
+  end
+
+  return rank_lookup
+end
+
+local function get_badge_text(path, rank_lookup, glyphs)
+  local rank = rank_lookup[path]
+  if not rank then
+    return ""
+  end
+
+  return glyphs[rank] or ""
+end
+
 local function get_path_colors(is_hovered)
   local panel_config = config.plugins.recentdirs_panel
   if is_hovered then
@@ -421,29 +542,48 @@ local function get_path_colors(is_hovered)
     panel_config.path_suffix_color or style.text
 end
 
-local function draw_path_text(path, x, y, width, is_hovered)
+local function draw_path_text(path, x, y, width, is_hovered, badge_text, badge_color)
   local prefix, suffix = split_path(path)
   local prefix_color, suffix_color = get_path_colors(is_hovered)
   local text_y = y + math.floor(style.padding.y / 2)
+  local badge_width = 0
+  local badge_spacing = 0
+
+  if badge_text and badge_text ~= "" then
+    badge_width = style.font:get_width(badge_text)
+    if badge_width > 0 and badge_width < width then
+      badge_spacing = style.padding.x
+    end
+  end
+
+  local path_width = width
+  if badge_width > 0 then
+    path_width = math.max(0, width - badge_width - badge_spacing)
+  end
+
   local suffix_width = style.font:get_width(suffix)
 
-  if suffix_width >= width then
-    local clipped_suffix = truncate_left(style.font, suffix, width)
+  if suffix_width >= path_width then
+    local clipped_suffix = truncate_left(style.font, suffix, path_width)
     if clipped_suffix ~= "" then
       renderer.draw_text(style.font, clipped_suffix, x, text_y, suffix_color)
     end
-    return
+  elseif path_width > 0 then
+    local prefix_width = math.max(0, path_width - suffix_width)
+    local clipped_prefix = compact_prefix(prefix, prefix_width)
+    local draw_x = x
+
+    if clipped_prefix ~= "" then
+      draw_x = renderer.draw_text(style.font, clipped_prefix, draw_x, text_y, prefix_color)
+    end
+
+    renderer.draw_text(style.font, suffix, draw_x, text_y, suffix_color)
   end
 
-  local prefix_width = math.max(0, width - suffix_width)
-  local clipped_prefix = compact_prefix(prefix, prefix_width)
-  local draw_x = x
-
-  if clipped_prefix ~= "" then
-    draw_x = renderer.draw_text(style.font, clipped_prefix, draw_x, text_y, prefix_color)
+  if badge_width > 0 then
+    local badge_x = x + width - badge_width
+    renderer.draw_text(style.font, badge_text, badge_x, text_y, badge_color or style.text)
   end
-
-  renderer.draw_text(style.font, suffix, draw_x, text_y, suffix_color)
 end
 
 if not state.initialized then
@@ -473,6 +613,18 @@ if not state.open_doc_wrapped then
   state.open_doc_wrapped = true
 end
 
+if not activity_state.doc_text_change_wrapped then
+  local previous_doc_on_text_change = Doc.on_text_change
+  Doc.on_text_change = function(self, change_type)
+    local result = previous_doc_on_text_change(self, change_type)
+    if self and self.abs_filename then
+      mark_recent_edit(self.abs_filename)
+    end
+    return result
+  end
+  activity_state.doc_text_change_wrapped = true
+end
+
 if not state.doc_save_wrapped then
   local previous_doc_save = Doc.save
   Doc.save = function(self, filename, abs_filename)
@@ -483,6 +635,7 @@ if not state.doc_save_wrapped then
     local saved_abs_filename = self.abs_filename or abs_filename
     if saved_abs_filename and (was_new_file or saved_abs_filename ~= previous_abs_filename) then
       track_file(saved_abs_filename)
+      mark_recent_edit(saved_abs_filename)
     end
 
     return result
@@ -664,6 +817,10 @@ function RecentDirsPanel:draw()
   end
   local view_top = self.position.y + header_h
   local view_bottom = self.position.y + self.size.y
+  local dirs = get_display_dirs()
+  local badge_glyphs = get_edit_badge_glyphs(config.plugins.recentdirs_panel)
+  local badge_ranks = get_edit_rank_lookup(dirs, activity_state.dir_edit_order)
+  local badge_color = config.plugins.recentdirs_panel.edit_badge_color or style.text
 
   for index, text, x, y, w, h, path in self:each_item() do
     if y + h >= view_top and y < view_bottom then
@@ -672,7 +829,15 @@ function RecentDirsPanel:draw()
       end
 
       if path then
-        draw_path_text(path, x, y, w, index == self.hovered_index)
+        draw_path_text(
+          path,
+          x,
+          y,
+          w,
+          index == self.hovered_index,
+          get_badge_text(path, badge_ranks, badge_glyphs),
+          badge_color
+        )
       else
         renderer.draw_text(style.font, text, x, y + math.floor(style.padding.y / 2), style.dim)
       end

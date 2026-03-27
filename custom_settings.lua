@@ -1,10 +1,13 @@
 -- mod-version:3
 
+local common = require "core.common"
 local config = require "core.config"
 local style = require "core.style"
 
-local ui_font_size = 15 * SCALE
+local ui_font_size = 20 * SCALE
 local big_ui_font_size = ui_font_size * (46 / 15)
+local recent_edit_badge_hex_codes = { "2D58", "2E2C", "2E2B", "A4FD", "1F784" }
+local recent_edit_badge_color = { common.color "#00ff00" }
 
 local function file_exists(path)
   if not path or path == "" then
@@ -78,8 +81,12 @@ config.plugins.recentfiles_panel = config.plugins.recentfiles_panel or {}
 config.plugins.recentdirs_panel = config.plugins.recentdirs_panel or {}
 config.plugins.recentfiles_panel.visible = true
 config.plugins.recentfiles_panel.max_visible_items = 12
+config.plugins.recentfiles_panel.edit_badge_hex_codes = recent_edit_badge_hex_codes
+config.plugins.recentfiles_panel.edit_badge_color = recent_edit_badge_color
 
 config.plugins.recentdirs_panel.sort = true
+config.plugins.recentdirs_panel.edit_badge_hex_codes = recent_edit_badge_hex_codes
+config.plugins.recentdirs_panel.edit_badge_color = recent_edit_badge_color
 config.plugins.recentfiles_panel.sort = false
 
 local recentfiles_state = rawget(_G, "__recentfiles_panel_state")
