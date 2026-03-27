@@ -40,7 +40,7 @@ local function build_font_stack(current_font)
   local windir = os.getenv("WINDIR") or "C:\\Windows"
 
   local carbon = load_font_if_exists(
-    localappdata .. PATHSEP .. "Microsoft" .. PATHSEP .. "Windows" .. PATHSEP .. "Fonts" .. PATHSEP .. "carbonplus-regular-bl.otf",
+    localappdata .. PATHSEP .. "Microsoft" .. PATHSEP .. "Windows" .. PATHSEP .. "Fonts" .. PATHSEP .. "carbonplus-bold-bl.otf",
     size
   )
   local symbol_font = load_font_if_exists(
