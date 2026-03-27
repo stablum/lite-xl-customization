@@ -50,9 +50,14 @@ if not activity_state then
     file_edit_order = {},
     dir_edit_order = {},
     doc_text_change_wrapped = false,
+    core_run_wrapped = false,
+    persist_loaded = false,
+    seeded_from_recent_files = false,
   }
   rawset(_G, "__recent_panels_activity_state", activity_state)
 end
+
+local activity_state_path = USERDIR .. PATHSEP .. "recent_edit_activity.lua"
 
 local function insert_unique(t, v)
   local n = #t
@@ -92,6 +97,79 @@ local function mark_recent_edit(path)
   local dir = dirname(encoded_path)
   if dir then
     activity_state.dir_edit_order[dir] = activity_state.edit_counter
+  end
+end
+
+local function save_activity_state()
+  local has_file_edits = next(activity_state.file_edit_order) ~= nil
+  local has_dir_edits = next(activity_state.dir_edit_order) ~= nil
+
+  if not has_file_edits and not has_dir_edits then
+    os.remove(activity_state_path)
+    return
+  end
+
+  local file = io.open(activity_state_path, "w+")
+  if not file then
+    return
+  end
+
+  file:write("return ", common.serialize({
+    edit_counter = activity_state.edit_counter,
+    file_edit_order = activity_state.file_edit_order,
+    dir_edit_order = activity_state.dir_edit_order,
+  }, { pretty = true }))
+  file:close()
+end
+
+local function ensure_activity_state_loaded()
+  if activity_state.persist_loaded then
+    return
+  end
+
+  activity_state.persist_loaded = true
+  local file = io.open(activity_state_path, "r")
+  if not file then
+    return
+  end
+
+  local content = file:read("*a")
+  file:close()
+
+  local loader, err = load(content)
+  if not loader then
+    core.error("recent panel activity load failed: %s", err)
+    return
+  end
+
+  local ok, saved_state = pcall(loader)
+  if not ok or type(saved_state) ~= "table" then
+    return
+  end
+
+  if type(saved_state.edit_counter) == "number" then
+    activity_state.edit_counter = saved_state.edit_counter
+  end
+  if type(saved_state.file_edit_order) == "table" then
+    activity_state.file_edit_order = saved_state.file_edit_order
+  end
+  if type(saved_state.dir_edit_order) == "table" then
+    activity_state.dir_edit_order = saved_state.dir_edit_order
+  end
+end
+
+local function seed_activity_state_from_recent_files(paths)
+  if activity_state.seeded_from_recent_files then
+    return
+  end
+
+  activity_state.seeded_from_recent_files = true
+  if next(activity_state.file_edit_order) ~= nil then
+    return
+  end
+
+  for index = #paths, 1, -1 do
+    mark_recent_edit(common.home_expand(paths[index]))
   end
 end
 
@@ -587,12 +665,14 @@ local function draw_path_text(path, x, y, width, is_hovered, badge_text, badge_c
 end
 
 if not state.initialized then
+  ensure_activity_state_loaded()
   for _, path in ipairs(recent_files_module) do
     local dir = dirname(path)
     if dir then
       insert_unique(state.dirs, dir)
     end
   end
+  seed_activity_state_from_recent_files(recent_files_module)
   trim_dirs()
   state.initialized = true
 end
@@ -653,6 +733,16 @@ if not state.command_perform_wrapped then
     return result
   end
   state.command_perform_wrapped = true
+end
+
+if not activity_state.core_run_wrapped then
+  local previous_core_run = core.run
+  core.run = function(...)
+    local result = previous_core_run(...)
+    save_activity_state()
+    return result
+  end
+  activity_state.core_run_wrapped = true
 end
 
 local RecentDirsPanel = View:extend()
