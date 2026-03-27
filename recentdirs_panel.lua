@@ -5,6 +5,7 @@ local common = require "core.common"
 local config = require "core.config"
 local style = require "core.style"
 local command = require "core.command"
+local Doc = require "core.doc"
 local View = require "core.view"
 
 local ok_tree, TreeView = pcall(require, "plugins.treeview")
@@ -30,6 +31,7 @@ if not state then
     dirs = {},
     initialized = false,
     open_doc_wrapped = false,
+    doc_save_wrapped = false,
     command_perform_wrapped = false,
     commands_added = false,
     view = nil,
@@ -387,6 +389,23 @@ if not state.open_doc_wrapped then
     return doc
   end
   state.open_doc_wrapped = true
+end
+
+if not state.doc_save_wrapped then
+  local previous_doc_save = Doc.save
+  Doc.save = function(self, filename, abs_filename)
+    local previous_abs_filename = self.abs_filename
+    local was_new_file = self.new_file
+    local result = previous_doc_save(self, filename, abs_filename)
+
+    local saved_abs_filename = self.abs_filename or abs_filename
+    if saved_abs_filename and (was_new_file or saved_abs_filename ~= previous_abs_filename) then
+      track_file(saved_abs_filename)
+    end
+
+    return result
+  end
+  state.doc_save_wrapped = true
 end
 
 if not state.command_perform_wrapped then
