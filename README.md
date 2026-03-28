@@ -119,7 +119,7 @@ config.plugins.treeview_recent_badges = {
 
 For `recentfiles_panel`, `extension_color` and `hover_extension_color` apply to the full extension token, including the leading `.`.
 
-Hovering a recent item shows a tooltip with the full uncompressed parent path. In `recentfiles_panel` the filename is omitted because it is already visible, and in `recentdirs_panel` the deepest directory name is omitted for the same reason.
+Hovering a recent item shows a tooltip with the full uncompressed path context. In `recentfiles_panel` the filename is omitted because it is already visible. In `recentdirs_panel` the tooltip shows the full directory path.
 
 `custom_settings.lua` currently applies:
 

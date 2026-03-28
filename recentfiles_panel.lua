@@ -293,6 +293,19 @@ local function get_tooltip_prefix(path)
   return tooltip_prefix
 end
 
+local function get_path_separator(path)
+  if not path or path == "" then
+    return PATHSEP
+  end
+  if path:find("\\", 1, true) then
+    return "\\"
+  end
+  if path:find("/", 1, true) then
+    return "/"
+  end
+  return PATHSEP
+end
+
 local function utf8_next_char_index(text, index)
   local byte = text:byte(index)
   if not byte then
@@ -458,6 +471,20 @@ local function compact_prefix(prefix, max_width)
   end
 
   return truncate_left(style.font, prefix, max_width)
+end
+
+local function ensure_visible_separator(prefix, original_prefix, path_width)
+  if prefix == "" or prefix:match("[/\\]$") then
+    return prefix
+  end
+
+  local separator = get_path_separator(original_prefix)
+  local candidate = prefix .. separator
+  if style.font:get_width(candidate) < path_width then
+    return candidate
+  end
+
+  return prefix
 end
 
 local function codepoint_to_utf8(codepoint)
@@ -648,13 +675,30 @@ local function draw_path_text(path, x, y, width, is_hovered, badge_text, badge_c
   elseif path_width > 0 then
     local prefix_width = math.max(0, path_width - suffix_width)
     local clipped_prefix = compact_prefix(prefix, prefix_width)
+    clipped_prefix = ensure_visible_separator(clipped_prefix, prefix, path_width)
     local draw_x = x
+    local remaining_suffix_width = math.max(0, path_width - style.font:get_width(clipped_prefix))
+    local displayed_suffix = suffix
 
     if clipped_prefix ~= "" then
       draw_x = renderer.draw_text(style.font, clipped_prefix, draw_x, text_y, prefix_color)
     end
 
-    draw_suffix_segments(basename, extension, draw_x, text_y, suffix_color, extension_color)
+    if style.font:get_width(displayed_suffix) > remaining_suffix_width then
+      displayed_suffix = truncate_left(style.font, displayed_suffix, remaining_suffix_width)
+    end
+
+    if displayed_suffix ~= "" then
+      if extension ~= ""
+        and #displayed_suffix >= #extension
+        and displayed_suffix:sub(-#extension) == extension
+      then
+        local displayed_basename = displayed_suffix:sub(1, #displayed_suffix - #extension)
+        draw_suffix_segments(displayed_basename, extension, draw_x, text_y, suffix_color, extension_color)
+      else
+        renderer.draw_text(style.font, displayed_suffix, draw_x, text_y, suffix_color)
+      end
+    end
   end
 
   if badge_width > 0 then
