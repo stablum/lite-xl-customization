@@ -24,7 +24,13 @@ config.plugins.recentfiles_panel = common.merge({
   sort = false,
   edit_badge_hex_codes = { "2D58", "2E2C", "2E2B", "A4FD", "1F784" },
   edit_badge_color = { common.color "#00ff00" },
+  tooltip_text_color = style.text,
+  tooltip_background_color = style.background2,
+  tooltip_border_color = style.text,
 }, config.plugins.recentfiles_panel)
+
+local tooltip_offset = style.font:get_height()
+local tooltip_border = 1
 
 local state = rawget(_G, "__recentfiles_panel_state")
 if not state then
@@ -277,6 +283,14 @@ local function split_suffix_extension(suffix)
     return stem, extension
   end
   return suffix, ""
+end
+
+local function get_tooltip_prefix(path)
+  local tooltip_prefix = select(1, split_path(path))
+  if tooltip_prefix == "" then
+    return nil
+  end
+  return tooltip_prefix
 end
 
 local function utf8_next_char_index(text, index)
@@ -750,6 +764,7 @@ function RecentFilesPanel:new()
   self.init_size = true
   self.target_size = 0
   self.hovered_index = nil
+  self.tooltip = { x = nil, y = nil, text = nil }
 end
 
 function RecentFilesPanel:get_name()
@@ -849,6 +864,48 @@ function RecentFilesPanel:get_item_at(px, py)
   end
 end
 
+function RecentFilesPanel:update_tooltip(px, py, index)
+  local files = get_display_files()
+  local path = index and files[index]
+  local tooltip_text = path and get_tooltip_prefix(path) or nil
+
+  if tooltip_text and tooltip_text ~= "" then
+    self.tooltip.x = px
+    self.tooltip.y = py
+    self.tooltip.text = tooltip_text
+  else
+    self.tooltip.x = nil
+    self.tooltip.y = nil
+    self.tooltip.text = nil
+  end
+end
+
+function RecentFilesPanel:draw_tooltip()
+  local text = self.tooltip.text
+  if not text or text == "" or not self.tooltip.x or not self.tooltip.y then
+    return
+  end
+
+  local text_color = config.plugins.recentfiles_panel.tooltip_text_color or style.text
+  local background_color = config.plugins.recentfiles_panel.tooltip_background_color or style.background2
+  local border_color = config.plugins.recentfiles_panel.tooltip_border_color or style.text
+  local w = style.font:get_width(text) + style.padding.x
+  local h = style.font:get_height() + style.padding.y
+  local x = self.tooltip.x + tooltip_offset
+  local y = self.tooltip.y + tooltip_offset
+
+  if x + w > core.root_view.root_node.size.x then
+    x = math.max(0, x - w)
+  end
+  if y + h > core.root_view.root_node.size.y then
+    y = math.max(0, y - h)
+  end
+
+  renderer.draw_rect(x - tooltip_border, y - tooltip_border, w + 2 * tooltip_border, h + 2 * tooltip_border, border_color)
+  renderer.draw_rect(x, y, w, h, background_color)
+  common.draw_text(style.font, text_color, text, "center", x, y, w, h)
+end
+
 function RecentFilesPanel:draw()
   if not self.visible then
     return
@@ -915,20 +972,30 @@ function RecentFilesPanel:draw()
   )
 
   self:draw_scrollbar()
+  if self.tooltip.text and self.tooltip.x and self.tooltip.y then
+    core.root_view:defer_draw(self.draw_tooltip, self)
+  end
 end
 
 function RecentFilesPanel:on_mouse_left()
   RecentFilesPanel.super.on_mouse_left(self)
   self.hovered_index = nil
+  self.tooltip.x = nil
+  self.tooltip.y = nil
+  self.tooltip.text = nil
 end
 
 function RecentFilesPanel:on_mouse_moved(px, py, dx, dy)
   if RecentFilesPanel.super.on_mouse_moved(self, px, py, dx, dy) then
+    self.tooltip.x = nil
+    self.tooltip.y = nil
+    self.tooltip.text = nil
     return true
   end
 
   local index = self:get_item_at(px, py)
   self.hovered_index = index
+  self:update_tooltip(px, py, index)
   return index ~= nil
 end
 

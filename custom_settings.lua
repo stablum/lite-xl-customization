@@ -8,6 +8,9 @@ local ui_font_size = 20 * SCALE
 local big_ui_font_size = ui_font_size * (46 / 15)
 local recent_edit_badge_hex_codes = { "2059", "2E2C", "2E2B", "003A", "00B7" }
 local recent_edit_badge_color = { common.color "#00ff00" }
+local recent_panel_tooltip_text_color = { common.color "#ff0000" }
+local recent_panel_tooltip_background_color = { common.color "#000000" }
+local recent_panel_tooltip_border_color = { common.color "#773300" }
 
 local function file_exists(path)
   if not path or path == "" then
@@ -84,10 +87,16 @@ config.plugins.recentfiles_panel.visible = true
 config.plugins.recentfiles_panel.max_visible_items = 12
 config.plugins.recentfiles_panel.edit_badge_hex_codes = recent_edit_badge_hex_codes
 config.plugins.recentfiles_panel.edit_badge_color = recent_edit_badge_color
+config.plugins.recentfiles_panel.tooltip_text_color = recent_panel_tooltip_text_color
+config.plugins.recentfiles_panel.tooltip_background_color = recent_panel_tooltip_background_color
+config.plugins.recentfiles_panel.tooltip_border_color = recent_panel_tooltip_border_color
 
 config.plugins.recentdirs_panel.sort = true
 config.plugins.recentdirs_panel.edit_badge_hex_codes = recent_edit_badge_hex_codes
 config.plugins.recentdirs_panel.edit_badge_color = recent_edit_badge_color
+config.plugins.recentdirs_panel.tooltip_text_color = recent_panel_tooltip_text_color
+config.plugins.recentdirs_panel.tooltip_background_color = recent_panel_tooltip_background_color
+config.plugins.recentdirs_panel.tooltip_border_color = recent_panel_tooltip_border_color
 config.plugins.treeview_recent_badges.edit_badge_hex_codes = recent_edit_badge_hex_codes
 config.plugins.treeview_recent_badges.edit_badge_color = recent_edit_badge_color
 config.plugins.recentfiles_panel.sort = false

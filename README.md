@@ -89,6 +89,9 @@ config.plugins.recentdirs_panel = {
   path_suffix_color = { common.color "#ff0000" },
   hover_path_prefix_color = { common.color "#aa6666" },
   hover_path_suffix_color = { common.color "#ff6666" },
+  tooltip_text_color = { common.color "#ff0000" },
+  tooltip_background_color = { common.color "#000000" },
+  tooltip_border_color = { common.color "#773300" },
 }
 
 config.plugins.recentfiles_panel = {
@@ -101,6 +104,9 @@ config.plugins.recentfiles_panel = {
   hover_path_prefix_color = { common.color "#aa6666" },
   hover_path_suffix_color = { common.color "#ff6666" },
   hover_extension_color = { common.color "#ffffff" },
+  tooltip_text_color = { common.color "#ff0000" },
+  tooltip_background_color = { common.color "#000000" },
+  tooltip_border_color = { common.color "#773300" },
 }
 
 config.plugins.treeview_recent_badges = {
@@ -112,6 +118,8 @@ config.plugins.treeview_recent_badges = {
 `sort` controls whether the panel shows entries alphabetically or keeps the original recent-item order.
 
 For `recentfiles_panel`, `extension_color` and `hover_extension_color` apply to the full extension token, including the leading `.`.
+
+Hovering a recent item shows a tooltip with the full uncompressed parent path. In `recentfiles_panel` the filename is omitted because it is already visible, and in `recentdirs_panel` the deepest directory name is omitted for the same reason.
 
 `custom_settings.lua` currently applies:
 
@@ -134,12 +142,18 @@ config.plugins.recentfiles_panel = {
   max_visible_items = 12,
   edit_badge_hex_codes = { "2059", "2E2C", "2E2B", "003A", "00B7" },
   edit_badge_color = { common.color "#00ff00" },
+  tooltip_text_color = { common.color "#ff0000" },
+  tooltip_background_color = { common.color "#000000" },
+  tooltip_border_color = { common.color "#773300" },
 }
 
 config.plugins.recentdirs_panel = {
   sort = true,
   edit_badge_hex_codes = { "2059", "2E2C", "2E2B", "003A", "00B7" },
   edit_badge_color = { common.color "#00ff00" },
+  tooltip_text_color = { common.color "#ff0000" },
+  tooltip_background_color = { common.color "#000000" },
+  tooltip_border_color = { common.color "#773300" },
 }
 
 config.plugins.treeview_recent_badges = {
