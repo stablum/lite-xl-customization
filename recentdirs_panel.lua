@@ -545,20 +545,6 @@ local function compact_prefix(prefix, max_width)
   return truncate_left(style.font, prefix, max_width)
 end
 
-local function ensure_visible_separator(prefix, original_prefix, path_width)
-  if prefix == "" or prefix:match("[/\\]$") then
-    return prefix
-  end
-
-  local separator = get_path_separator(original_prefix)
-  local candidate = prefix .. separator
-  if style.font:get_width(candidate) < path_width then
-    return candidate
-  end
-
-  return prefix
-end
-
 local function codepoint_to_utf8(codepoint)
   if not codepoint or codepoint < 0 or codepoint > 0x10FFFF then
     return nil
@@ -696,17 +682,39 @@ local function draw_path_text(path, x, y, width, is_hovered, badge_text, badge_c
   elseif path_width > 0 then
     local prefix_width = math.max(0, path_width - suffix_width)
     local clipped_prefix = compact_prefix(prefix, prefix_width)
-    clipped_prefix = ensure_visible_separator(clipped_prefix, prefix, path_width)
-    local draw_x = x
-    local remaining_suffix_width = math.max(0, path_width - style.font:get_width(clipped_prefix))
-    local displayed_suffix = suffix
-
-    if clipped_prefix ~= "" then
-      draw_x = renderer.draw_text(style.font, clipped_prefix, draw_x, text_y, prefix_color)
+    local separator_text = ""
+    if prefix ~= "" and clipped_prefix ~= "" and not clipped_prefix:match("[/\\]$") then
+      separator_text = get_path_separator(prefix)
     end
+
+    local prefix_total_width = style.font:get_width(clipped_prefix)
+      + style.font:get_width(separator_text)
+    if prefix_total_width >= path_width then
+      clipped_prefix = ""
+      separator_text = ""
+      prefix_total_width = 0
+    end
+
+    local draw_x = x
+    local remaining_suffix_width = math.max(0, path_width - prefix_total_width)
+    local displayed_suffix = suffix
 
     if style.font:get_width(displayed_suffix) > remaining_suffix_width then
       displayed_suffix = truncate_left(style.font, displayed_suffix, remaining_suffix_width)
+    end
+
+    if displayed_suffix == "" then
+      clipped_prefix = ""
+      separator_text = ""
+      draw_x = x
+      displayed_suffix = truncate_left(style.font, suffix, path_width)
+    else
+      if clipped_prefix ~= "" then
+        draw_x = renderer.draw_text(style.font, clipped_prefix, draw_x, text_y, prefix_color)
+      end
+      if separator_text ~= "" then
+        draw_x = renderer.draw_text(style.font, separator_text, draw_x, text_y, prefix_color)
+      end
     end
 
     if displayed_suffix ~= "" then
