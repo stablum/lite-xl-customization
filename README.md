@@ -1,14 +1,15 @@
 # Lite XL Customization
 
-This repository contains five single-file Lite XL plugins:
+This repository contains six single-file Lite XL plugins:
 
 - `custom_settings.lua` applies your preferred plugin configuration overrides, such as `autoreload` and `recentfiles_panel` settings.
+- `focused_mode.lua` adds a focused mode toggle that hides the treeview, status bar, line gutter, and tabs.
 - `redblack_style.lua` applies your black-and-red style preferences as an optional visual theme plugin.
 - `recentdirs_panel.lua` adds a Recent Directories panel above the recent files panel. Clicking a directory reveals it in the treeview without closing your current files.
 - `recentfiles_panel.lua` adds a Recent Files panel to the treeview area and lets you reopen recently accessed files.
 - `treeview_recent_badges.lua` appends configurable recent-edit badges to matching file and directory entries in the treeview.
 
-`recentfiles_panel.lua` and `recentdirs_panel.lua` depend on Lite XL's built-in `treeview` and `recentfiles` plugins. `treeview_recent_badges.lua` depends on Lite XL's built-in `treeview` plugin.
+`recentfiles_panel.lua` and `recentdirs_panel.lua` depend on Lite XL's built-in `treeview` and `recentfiles` plugins. `treeview_recent_badges.lua` depends on Lite XL's built-in `treeview` plugin. `focused_mode.lua` uses the built-in `treeview` plugin when it is available.
 
 ## Installation
 
@@ -21,6 +22,7 @@ Run the installer from this repository:
 The installer now shows a selection menu so you can install:
 
 - `custom_settings.lua` only
+- `focused_mode.lua` only
 - `redblack_style.lua` only
 - `recentdirs_panel.lua` only
 - `recentfiles_panel.lua` only
@@ -42,6 +44,7 @@ For non-interactive use, you can choose explicitly:
 .\install.ps1 -Plugin RecentDirs
 .\install.ps1 -Plugin RecentFiles
 .\install.ps1 -Plugin TreeviewBadges
+.\install.ps1 -Plugin FocusedMode
 .\install.ps1 -Plugin Style
 .\install.ps1 -Plugin Settings
 ```
@@ -68,10 +71,15 @@ You can override the destination:
 
 The plugins register these commands:
 
+- `focused-mode:toggle`
+- `focused-mode:enable`
+- `focused-mode:disable`
 - `recentdirs-panel:toggle`
 - `recentdirs-panel:clear`
 - `recentfiles-panel:toggle`
 - `recentfiles-panel:clear`
+
+The default shortcut for `focused-mode:toggle` is `Alt+Z`.
 
 ## Configuration
 
@@ -79,6 +87,10 @@ Example Lite XL user config:
 
 ```lua
 local common = require "core.common"
+
+config.plugins.focused_mode = {
+  enabled = false,
+}
 
 config.plugins.recentdirs_panel = {
   visible = true,
